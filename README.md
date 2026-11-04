@@ -155,6 +155,14 @@ be sent later, including emails delayed with Outlook's own Delay Delivery. It ha
 buttons for **Change time…**, **Send now**, **Cancel send**, **Open** and **Refresh**.
 For a meeting, the row acts on the meeting itself.
 
+Items that are in the Outbox but **no longer queued** (opened and closed without
+Send) appear at the top in red, as *Not queued*, or *Not sent (overdue)* once their
+time has passed. **Put back** puts one back in the queue unchanged. If its time has
+already passed, it asks first and then sends it straight away.
+
+The Scheduled window reads the Outbox without opening anything, so looking at it
+never disturbs what's waiting.
+
 ### The Outbox trap, and how Prodigo handles it
 
 In classic Outlook, **opening an item in the Outbox takes it out of the send queue**.
@@ -281,6 +289,15 @@ every invite that was replaced.
   answer No: it stays unsent in the Outbox.
 - [ ] Scheduled → Change time… moves an email; Send now sends it immediately;
   Cancel send removes it.
+- [ ] **Opening the Scheduled window doesn't disturb anything:** schedule an email a
+  few minutes ahead, open and close Scheduled a few times, and check it's still
+  delivered on time.
+- [ ] **Stuck items show up:** open a scheduled email from the Outbox and close it,
+  answering No. Scheduled shows it in red as *Not queued*. **Put back** queues it
+  again, and it's delivered on time.
+- [ ] **Sending from an opened Outbox email isn't undone:** open a scheduled email
+  from the Outbox, change it and press Send. Prodigo doesn't ask anything, and it's
+  delivered on time.
 - [ ] An email scheduled with Outlook's own Delay Delivery also shows in Scheduled.
 
 **Meetings**

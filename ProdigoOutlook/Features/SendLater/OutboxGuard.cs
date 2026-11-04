@@ -137,15 +137,37 @@ namespace ProdigoOutlook.Features.SendLater
 
             private void Check()
             {
+                // Looked up in the Outbox's table first, without opening the item: if
+                // the user pressed Send in the window, opening it now would take it
+                // straight back out of the queue. Only a stuck item is opened, and only
+                // to send it.
+                OutboxEntry entry = SendLaterOutbox.FindInOutbox(_entryId);
+                if (entry == null || !entry.IsStuck) return; // sent, deleted, or queued as it should be
+
+                DateTime deliver = entry.DeliverAt;
+                bool stillAhead = entry.HasDeliveryTime && deliver > DateTime.Now;
+
+                if (!entry.IsMeeting)
+                {
+                    string question = stillAhead
+                        ? "\"" + _subject + "\" was opened from the Outbox, which takes it out of the send queue. " +
+                          "It will not be sent unless it is put back.\n\nKeep it scheduled for " + TimeHelpers.Friendly(deliver) + "?"
+                        : "\"" + _subject + "\" was opened from the Outbox and is no longer queued, and its delivery time has passed.\n\nSend it now?";
+
+                    var answer = MessageBox.Show(Ol.OwnerWindow(), question, "Prodigo - Send Later",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
+                    if (answer != DialogResult.Yes)
+                    {
+                        Log.Info("OutboxGuard: user left \"" + _subject + "\" unsent in the Outbox");
+                        return;
+                    }
+                }
+
                 object item = Ol.ItemById(_entryId);
-                if (item == null) return; // deleted, or already sent and moved on
+                if (item == null) return;
 
                 try
                 {
-                    if (!Ol.IsInOutbox(item) || ItemProps.IsSubmitted(item)) return;
-
-                    DateTime deliver = SendLaterOutbox.ReadDeferred(item);
-                    bool stillAhead = !TimeHelpers.IsNoDate(deliver) && deliver > DateTime.Now;
 
                     if (item is Outlook.MeetingItem meeting)
                     {
@@ -156,22 +178,8 @@ namespace ProdigoOutlook.Features.SendLater
 
                     if (item is Outlook.MailItem mail)
                     {
-                        string question = stillAhead
-                            ? "\"" + _subject + "\" was opened from the Outbox, which takes it out of the send queue. " +
-                              "It will not be sent unless it is put back.\n\nKeep it scheduled for " + TimeHelpers.Friendly(deliver) + "?"
-                            : "\"" + _subject + "\" was opened from the Outbox and is no longer queued, and its delivery time has passed.\n\nSend it now?";
-
-                        var answer = MessageBox.Show(Ol.OwnerWindow(), question, "Prodigo - Send Later",
-                            MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
-                        if (answer == DialogResult.Yes)
-                        {
-                            Resubmit(mail, () => mail.Send());
-                            Log.Info("OutboxGuard: put the email \"" + _subject + "\" back in the send queue");
-                        }
-                        else
-                        {
-                            Log.Info("OutboxGuard: user left \"" + _subject + "\" unsent in the Outbox");
-                        }
+                        Resubmit(mail, () => mail.Send());
+                        Log.Info("OutboxGuard: put the email \"" + _subject + "\" back in the send queue");
                     }
                 }
                 catch (Exception ex)

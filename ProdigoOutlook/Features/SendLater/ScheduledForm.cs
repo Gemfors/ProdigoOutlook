@@ -21,7 +21,7 @@ namespace ProdigoOutlook.Features.SendLater
     internal sealed class ScheduledForm : Form
     {
         private ListView _list;
-        private Button _change, _sendNow, _cancelSend, _open;
+        private Button _putBack, _change, _sendNow, _cancelSend, _open;
         private List<OutboxEntry> _entries = new List<OutboxEntry>();
 
         public static void Open(Office.IRibbonControl control)
@@ -36,22 +36,23 @@ namespace ProdigoOutlook.Features.SendLater
         {
             FormStyle.ApplyDialog(this, "Scheduled Sends");
             FormBorderStyle = FormBorderStyle.Sizable;
-            MinimumSize = new Size(760, 300);
+            MinimumSize = new Size(880, 300);
             Build();
             Load += (s, e) => Reload();
         }
 
         private void Build()
         {
-            ClientSize = new Size(720, 360);
+            ClientSize = new Size(840, 360);
 
             _list = new ListView
             {
                 View = View.Details, FullRowSelect = true, MultiSelect = false, HideSelection = false,
-                Left = 12, Top = 12, Width = 696, Height = 290,
+                Left = 12, Top = 12, Width = 816, Height = 290,
                 Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right,
             };
             _list.Columns.Add("Delivers", 120);
+            _list.Columns.Add("Status", 120);
             _list.Columns.Add("Type", 90);
             _list.Columns.Add("Subject", 280);
             _list.Columns.Add("To", 200);
@@ -60,12 +61,13 @@ namespace ProdigoOutlook.Features.SendLater
             Controls.Add(_list);
 
             int top = 314;
-            _change = AddButton("&Change time…", 12, top, () => Act(ChangeTime));
-            _sendNow = AddButton("Send &now", 132, top, () => Act(SendNow));
-            _cancelSend = AddButton("Ca&ncel send", 252, top, () => Act(CancelSend));
-            _open = AddButton("&Open", 372, top, () => Act(OpenEntry));
-            AddButton("&Refresh", 492, top, Reload);
-            Button close = AddButton("Close", 612, top, Close);
+            _putBack = AddButton("&Put back", 12, top, () => Act(PutBack));
+            _change = AddButton("&Change time…", 126, top, () => Act(ChangeTime));
+            _sendNow = AddButton("Send &now", 240, top, () => Act(SendNow));
+            _cancelSend = AddButton("Ca&ncel send", 354, top, () => Act(CancelSend));
+            _open = AddButton("&Open", 468, top, () => Act(OpenEntry));
+            AddButton("&Refresh", 582, top, Reload);
+            Button close = AddButton("Close", 732, top, Close);
             close.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
             CancelButton = close;
 
@@ -89,29 +91,38 @@ namespace ProdigoOutlook.Features.SendLater
             Cursor = Cursors.WaitCursor;
             try
             {
-                // One row per meeting (its latest waiting message), one per email.
-                List<OutboxEntry> all = SendLaterOutbox.Waiting();
-                _entries = all.Where(e => !e.IsMeeting || e.MeetingId == null)
-                    .Concat(all.Where(e => e.IsMeeting && e.MeetingId != null)
-                               .GroupBy(e => e.MeetingId)
-                               .Select(g => g.OrderBy(e => e.DeliverAt).Last()))
-                    .OrderBy(e => e.DeliverAt)
+                // Stuck items first, each on its own row - they are the ones that need
+                // something done. Then one row per meeting (its latest waiting message)
+                // and one per email.
+                List<OutboxEntry> all = SendLaterOutbox.Waiting(includeStuck: true);
+                List<OutboxEntry> queued = all.Where(e => !e.IsStuck).ToList();
+                _entries = all.Where(e => e.IsStuck)
+                    .Concat(queued.Where(e => !e.IsMeeting || e.MeetingId == null)
+                        .Concat(queued.Where(e => e.IsMeeting && e.MeetingId != null)
+                                      .GroupBy(e => e.MeetingId)
+                                      .Select(g => g.OrderBy(e => e.DeliverAt).Last()))
+                        .OrderBy(e => e.DeliverAt))
                     .ToList();
 
                 _list.BeginUpdate();
                 _list.Items.Clear();
                 foreach (OutboxEntry e in _entries)
                 {
-                    var row = new ListViewItem(TimeHelpers.Friendly(e.DeliverAt)) { Tag = e };
+                    var row = new ListViewItem(e.HasDeliveryTime ? TimeHelpers.Friendly(e.DeliverAt) : "-") { Tag = e };
+                    row.SubItems.Add(StatusOf(e));
                     row.SubItems.Add(e.IsMeeting ? "Meeting " + e.KindLabel.ToLowerInvariant() : e.KindLabel);
                     row.SubItems.Add(e.Subject ?? string.Empty);
                     row.SubItems.Add(e.To ?? string.Empty);
+                    if (e.IsStuck) row.ForeColor = Color.Firebrick;
                     _list.Items.Add(row);
                 }
                 _list.EndUpdate();
 
+                int stuck = _entries.Count(e => e.IsStuck);
                 if (_entries.Count == 0)
                     Text = "Scheduled Sends - nothing is waiting";
+                else if (stuck > 0)
+                    Text = "Scheduled Sends - " + stuck + " not queued, " + (_entries.Count - stuck) + " waiting";
                 else
                     Text = "Scheduled Sends - " + _entries.Count + " waiting";
             }
@@ -131,17 +142,61 @@ namespace ProdigoOutlook.Features.SendLater
         private OutboxEntry Selected =>
             _list.SelectedItems.Count == 1 ? (OutboxEntry)_list.SelectedItems[0].Tag : null;
 
+        private static string StatusOf(OutboxEntry e)
+        {
+            if (!e.IsStuck) return "Waiting";
+            return e.HasDeliveryTime && e.DeliverAt > DateTime.Now ? "Not queued" : "Not sent (overdue)";
+        }
+
         private void UpdateButtons()
         {
             OutboxEntry e = Selected;
             bool any = e != null;
             _cancelSend.Enabled = _open.Enabled = any;
+            _putBack.Enabled = any && e.IsStuck;
 
             // A meeting invite delayed with Outlook's own Delay Delivery has no Prodigo
             // link to its meeting, so resending the meeting could not replace it - the
-            // attendees would get two invites. Cancel and Open still work.
-            bool prodigoOrEmail = any && (!e.IsMeeting || e.MeetingId != null);
-            _change.Enabled = _sendNow.Enabled = prodigoOrEmail;
+            // attendees would get two invites. A stuck meeting invite is the same: the
+            // waiting-invite search does not see it, so Put back is the way to fix it.
+            // Cancel and Open still work.
+            bool canResend = any && (!e.IsMeeting || (e.MeetingId != null && !e.IsStuck));
+            _change.Enabled = _sendNow.Enabled = canResend;
+        }
+
+        /// <summary>
+        /// Puts a stuck item back in the send queue, unchanged. If its time has passed it
+        /// goes straight away - after asking, for an email.
+        /// </summary>
+        private void PutBack(OutboxEntry entry)
+        {
+            bool overdue = !entry.HasDeliveryTime || entry.DeliverAt <= DateTime.Now;
+            if (overdue && !Confirm("The delivery time for \"" + entry.Subject + "\" has passed. Send it now?"))
+                return;
+
+            object item = Ol.ItemById(entry.EntryId);
+            if (item == null) throw new InvalidOperationException("The item is no longer in the Outbox.");
+
+            SendLaterOutbox.BeginResubmit(entry.EntryId);
+            try
+            {
+                if (item is Outlook.MailItem mail)
+                {
+                    if (overdue) SendLaterOutbox.ClearDeferred(mail);
+                    mail.Send();
+                }
+                else if (item is Outlook.MeetingItem meeting)
+                {
+                    if (overdue) SendLaterOutbox.ClearDeferred(meeting);
+                    meeting.Send();
+                }
+                Log.Info("Scheduled: put \"" + entry.Subject + "\" back in the send queue" + (overdue ? ", sending now" : ""));
+            }
+            finally
+            {
+                SendLaterOutbox.EndResubmit(entry.EntryId);
+                ComScope.Release(item);
+            }
         }
 
         /// <summary>Runs an action on the selected row, then refreshes the list.</summary>

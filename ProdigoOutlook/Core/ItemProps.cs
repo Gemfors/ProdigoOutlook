@@ -42,6 +42,12 @@ namespace ProdigoOutlook.Core
         /// <summary>PR_DISPLAY_TYPE_EX on an address entry; low byte 7 (DT_ROOM) is a meeting room.</summary>
         public const string DisplayTypeEx = "http://schemas.microsoft.com/mapi/proptag/0x39050003";
 
+        /// <summary>
+        /// The full schema name of one of Prodigo's notes, for reading it from a folder's
+        /// table of contents (Folder.GetTable) without opening the item.
+        /// </summary>
+        public static string Schema(string name) => NamedPrefix + name;
+
         public static string Get(object item, string name)
         {
             Outlook.PropertyAccessor pa = Accessor(item);

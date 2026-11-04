@@ -66,6 +66,15 @@ Strategy Manager at HiQ by day.
 
 ## Rules that hold everywhere
 
+- **Never open an Outbox item just to look at it.** Opening one through the object
+  model (`Items[i]`, `GetItemFromID`, `PropertyAccessor` on it) takes it out of the
+  send queue, exactly like double-clicking it.
+  - Found on 4 November 2026: merely opening the Scheduled window left Olle's
+    scheduled email stuck in the Outbox for good.
+  - Read the Outbox through `Folder.GetTable` instead (`SendLaterOutbox.ReadTable`,
+    `FindInOutbox`, `FolderHasGen`). It lists properties without opening anything.
+  - Open an item only to act on it, and then send or delete it in the same step.
+
 - **Don't release an inspector's own item** (`inspector.CurrentItem`), nor the
   appointment from `GetAssociatedAppointment` inside `ItemSend`. The window, or
   Prodigo's own button further up the call stack, is still using the same object.
