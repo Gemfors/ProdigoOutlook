@@ -112,6 +112,15 @@ Strategy Manager at HiQ by day.
 
 ## How Send later works
 
+**Delivery is local, not server-held, on Olle's account** (cached Exchange mode):
+- The delayed item waits in the local Outbox, and Outlook sends it when the time
+  comes. On 4 November 2026 an email due at 17:23 went at 19:32, when the sleeping
+  laptop woke.
+- Olle confirmed this is fine: it's how Outlook's own Delay Delivery behaves for him.
+  The requirement is "behave like Outlook's Delay Delivery", not "deliver while
+  Outlook is closed".
+- Don't add workarounds such as server-side sending or wake timers unless he asks.
+
 Stamps on the organizer's appointment:
 - `SendLater.Id` links the appointment to its messages.
 - `SendLater.Until` is the delivery time.

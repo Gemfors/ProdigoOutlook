@@ -93,8 +93,14 @@ opens:
 - **Other time:** pick a date and time, then click **Send**. Times in the past, or
   less than a minute away, are refused with a note under the picker.
 
-The email waits in your **Outbox** and Exchange delivers it at that time, even with
-Outlook closed. To cancel it, delete it from the Outbox or use **Scheduled** (below).
+The email waits in your **Outbox** until that time. To cancel it, delete it from the
+Outbox or use **Scheduled** (below).
+
+**Your computer sends it, exactly as with Outlook's own Delay Delivery.** If your
+laptop is asleep or Outlook is closed at the scheduled time, the email goes as soon as
+Outlook is running and connected again. Nothing is lost; it's just late. This was
+seen on 4 November 2026: an email due at 17:23, with the laptop asleep, went at 19:32
+when it woke.
 
 **Editing a scheduled email:** open it from the Outbox, change it, and press
 **Send**. The original time is kept. If the email has lost its delivery time by
@@ -114,8 +120,9 @@ among the attendees**: the room isn't reserved until the invite is delivered.
 What happens:
 
 - The meeting appears in your calendar straight away. Teams links are created now.
-- The invite waits in your Outbox. Exchange holds it and delivers it at the chosen
-  time, even with Outlook closed.
+- The invite waits in your Outbox and is sent at the chosen time, the same way as an
+  email: if your computer is asleep or Outlook is closed then, it goes as soon as
+  Outlook is running again.
 - Attendees get nothing until then. Their calendars and free/busy don't know about
   the meeting yet.
 - At the chosen time it's delivered, moves to Sent Items, and replies start coming in.
@@ -305,8 +312,10 @@ every invite that was replaced.
   Your calendar shows it straight away. The colleague gets nothing until the time,
   then gets the invite. The log says which route set the time (`DeferredDeliveryTime`
   or the `PR_DEFERRED_SEND_TIME` fallback).
-- [ ] **Outlook closed:** schedule an invite, quit Outlook completely, and confirm
-  it still arrives on time.
+- [ ] **Outlook closed or laptop asleep at the scheduled time:** schedule an invite,
+  quit Outlook (or let the laptop sleep) past its time, then start Outlook again. It
+  goes out shortly after, as Outlook's own Delay Delivery would. Do the same with an
+  email; already seen to work for email on 4 November.
 - [ ] **Update before delivery:** schedule, then change the time or location in the
   calendar and Send Update. The colleague gets **one** invite, with the change, about
   1 minute after the original time. The log says `replaced 1 waiting message(s)`.
