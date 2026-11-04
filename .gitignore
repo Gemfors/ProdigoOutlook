@@ -1,0 +1,38 @@
+bin/
+obj/
+packages/
+.vs/
+*.user
+*.suo
+*.cache
+*.log
+*.vspscc
+*.vssscc
+*.pdb
+*.vsto
+*.manifest
+*.Publish.xml
+*.application
+*.deploy
+*.tmp
+*.bak
+*.swp
+*.DS_Store
+*.sln.docstates
+*.userosscache
+*.sdf
+*.dbmdl
+*.vsidx
+
+# Signing material - never commit a private key
+*.pfx
+*.snk
+
+# Visual Studio upgrade reports
+UpgradeLog*.htm
+UpgradeLog*.XML
+
+# Pre-git snapshots of the whole project, kept before this repo existed.
+# Prodigo-v2..v5.zip were retired on 1 September 2026 - git covers this now.
+# To get one back:  git show 889e7d0:Prodigo-v5.zip > Prodigo-v5.zip
+Prodigo-v*.zip

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Appointment and meeting windows. Send Later is for the organizer only: the
+  "organizer" part of its tag makes GetVisible hide it on a meeting you were invited to.
+  See Explorer.xml for the other conventions.
+-->
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_Load">
+	<ribbon>
+		<tabs>
+			<tab id="tabProdigo" label="Prodigo" keytip="ZP">
+				<group id="grpSend" label="Send" getVisible="GetVisible" tag="sendlater|organizer">
+					<button id="btnSendLater" label="Send Later" size="large" imageMso="DelayDeliveryOutlook" keytip="SL" screentip="Send Later" supertip="Send the invite at a later time. Attendees see nothing until then. Also reschedules an invite that is already waiting." onAction="OnSendLater" getVisible="GetVisible" tag="sendlater|organizer" />
+				</group>
+				<group id="grpMeeting" label="Meeting" getVisible="GetVisible" tag="meetingpresets,conveniences">
+					<button id="btnMeetingPreset" label="Preset" size="large" imageMso="NewAppointment" keytip="MP" screentip="Meeting Preset" supertip="Apply a preset length and agenda to this meeting (phase 6)." onAction="OnPlanned" getVisible="GetVisible" tag="meetingpresets" />
+					<button id="btnCopyRecipients" label="Copy Attendees" imageMso="Copy" keytip="CR" screentip="Copy Recipients" supertip="Copy the attendees of this meeting to the clipboard (phase 8)." onAction="OnPlanned" getVisible="GetVisible" tag="conveniences" />
+					<button id="btnEmailAttendees" label="Email Attendees" imageMso="NewMailMessage" keytip="EA" screentip="Email Attendees" supertip="New email to everyone invited to this meeting (phase 8)." onAction="OnPlanned" getVisible="GetVisible" tag="conveniences" />
+				</group>
+				<group id="grpProdigo" label="Prodigo">
+					<button id="btnSettings" label="Settings" size="large" imageMso="ControlProperties" keytip="ST" screentip="Prodigo Settings" supertip="Switch features on and off, Send later presets, and the log." onAction="OnSettings" />
+				</group>
+			</tab>
+		</tabs>
+	</ribbon>
+</customUI>

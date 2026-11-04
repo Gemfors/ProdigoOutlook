@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- New email, reply and forward windows. See Explorer.xml for the conventions. -->
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_Load">
+	<ribbon>
+		<tabs>
+			<tab id="tabProdigo" label="Prodigo" keytip="ZP">
+				<group id="grpSend" label="Send" getVisible="GetVisible" tag="sendlater,followup">
+					<button id="btnSendLater" label="Send Later" size="large" imageMso="DelayDeliveryOutlook" keytip="SL" screentip="Send Later" supertip="Send this email at a later time. One click on a preset, or pick a time. Also changes the time of an email that is already scheduled." onAction="OnSendLater" getVisible="GetVisible" tag="sendlater" />
+					<button id="btnRemindNoReply" label="Remind If No Reply" size="large" imageMso="FlagToday" keytip="FU" screentip="Remind If No Reply" supertip="Remind me if nobody replies within a number of days (phase 5)." onAction="OnPlanned" getVisible="GetVisible" tag="followup" />
+				</group>
+				<group id="grpInsert" label="Insert" getVisible="GetVisible" tag="availability">
+					<button id="btnAvailability" label="Availability" size="large" imageMso="CalendarInsert" keytip="AV" screentip="Insert Availability" supertip="Insert your free times from your calendar as text at the cursor (phase 3)." onAction="OnPlanned" getVisible="GetVisible" tag="availability" />
+				</group>
+				<group id="grpTools" label="Tools" getVisible="GetVisible" tag="conveniences">
+					<button id="btnCopyRecipients" label="Copy Recipients" imageMso="Copy" keytip="CR" screentip="Copy Recipients" supertip="Copy the recipients of this email to the clipboard (phase 8)." onAction="OnPlanned" getVisible="GetVisible" tag="conveniences" />
+					<button id="btnCleanSubject" label="Clean Subject" imageMso="ClearFormatting" keytip="CS" screentip="Clean Subject" supertip="Tidy up prefixes such as SV: RE: Fwd: in the subject (phase 8)." onAction="OnPlanned" getVisible="GetVisible" tag="conveniences" />
+				</group>
+				<group id="grpProdigo" label="Prodigo">
+					<button id="btnSettings" label="Settings" size="large" imageMso="ControlProperties" keytip="ST" screentip="Prodigo Settings" supertip="Switch features on and off, Send later presets, and the log." onAction="OnSettings" />
+				</group>
+			</tab>
+		</tabs>
+	</ribbon>
+</customUI>

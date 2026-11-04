@@ -1,0 +1,37 @@
+# Line endings.
+#
+# Without this file, whether a file lands in a commit as LF or CRLF depends on
+# each machine's core.autocrlf setting, which is why git kept printing
+# "LF will be replaced by CRLF" warnings. Here the rule is fixed for everyone:
+# text files are stored LF inside git and checked out CRLF on Windows, which is
+# what Visual Studio writes anyway.
+
+* text=auto
+
+*.cs        text eol=crlf
+*.csproj    text eol=crlf
+*.sln       text eol=crlf
+*.dna       text eol=crlf
+*.config    text eol=crlf
+*.json      text eol=crlf
+*.xml       text eol=crlf
+*.resx      text eol=crlf
+*.vdproj    text eol=crlf
+*.settings  text eol=crlf
+*.md        text eol=crlf
+*.gitignore text eol=crlf
+
+# Never let git rewrite bytes inside these.
+*.xll   binary
+*.dll   binary
+*.exe   binary
+*.pdb   binary
+*.pfx   binary
+*.snk   binary
+*.thmx  binary
+*.xlsx  binary
+*.pptx  binary
+*.potx  binary
+*.zip   binary
+*.png   binary
+*.ico   binary

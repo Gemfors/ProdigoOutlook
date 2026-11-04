@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A received email opened in its own window. See Explorer.xml for the conventions. -->
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_Load">
+	<ribbon>
+		<tabs>
+			<tab id="tabProdigo" label="Prodigo" keytip="ZP">
+				<group id="grpMail" label="Mail" getVisible="GetVisible" tag="todo,fileemail,meetingpresets,conveniences">
+					<button id="btnTodo" label="To Todo" size="large" imageMso="NewTask" keytip="TD" screentip="Email to Todo" supertip="Create a task in Todo Kanban from this email (phase 4)." onAction="OnPlanned" getVisible="GetVisible" tag="todo" />
+					<button id="btnFileEmail" label="File Email" size="large" imageMso="FileSaveAs" keytip="FE" screentip="File Email" supertip="Save this email and its attachments to a project folder (phase 7)." onAction="OnPlanned" getVisible="GetVisible" tag="fileemail" />
+					<button id="btnMeetingPreset" label="Meeting From Email" size="large" imageMso="NewAppointment" keytip="MP" screentip="Meeting Preset" supertip="New meeting with the sender and recipients, a preset length and agenda (phase 6)." onAction="OnPlanned" getVisible="GetVisible" tag="meetingpresets" />
+					<button id="btnCopyRecipients" label="Copy Recipients" imageMso="Copy" keytip="CR" screentip="Copy Recipients" supertip="Copy the sender and recipients of this email to the clipboard (phase 8)." onAction="OnPlanned" getVisible="GetVisible" tag="conveniences" />
+				</group>
+				<group id="grpProdigo" label="Prodigo">
+					<button id="btnSettings" label="Settings" size="large" imageMso="ControlProperties" keytip="ST" screentip="Prodigo Settings" supertip="Switch features on and off, Send later presets, and the log." onAction="OnSettings" />
+				</group>
+			</tab>
+		</tabs>
+	</ribbon>
+</customUI>

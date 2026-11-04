@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Main Outlook window. Keytips: Alt, Z, P opens the tab; then the button's own keytip.
+  The same feature has the same keytip in every window. Screentips are the names the
+  AutoHotkey bridge lists and accepts, so keep them stable and unique; labels are free.
+  tag = the feature id (Core\Features.cs) that decides whether a control is shown.
+-->
+<customUI xmlns="http://schemas.microsoft.com/office/2009/07/customui" onLoad="Ribbon_Load">
+	<ribbon>
+		<tabs>
+			<tab id="tabProdigo" label="Prodigo" keytip="ZP">
+				<group id="grpSend" label="Send" getVisible="GetVisible" tag="sendlater">
+					<button id="btnScheduled" label="Scheduled" size="large" imageMso="DelayDeliveryOutlook" keytip="SC" screentip="Scheduled Sends" supertip="Everything waiting in the Outbox to be sent later. Change the time, send now, or cancel." onAction="OnScheduled" getVisible="GetVisible" tag="sendlater" />
+				</group>
+				<group id="grpMail" label="Mail" getVisible="GetVisible" tag="todo,fileemail,conveniences">
+					<button id="btnTodo" label="To Todo" size="large" imageMso="NewTask" keytip="TD" screentip="Email to Todo" supertip="Create a task in Todo Kanban from the selected email (phase 4)." onAction="OnPlanned" getVisible="GetVisible" tag="todo" />
+					<button id="btnFileEmail" label="File Email" size="large" imageMso="FileSaveAs" keytip="FE" screentip="File Email" supertip="Save the selected email and its attachments to a project folder (phase 7)." onAction="OnPlanned" getVisible="GetVisible" tag="fileemail" />
+					<button id="btnCopyRecipients" label="Copy Recipients" imageMso="Copy" keytip="CR" screentip="Copy Recipients" supertip="Copy the recipients or attendees of the selected item to the clipboard (phase 8)." onAction="OnPlanned" getVisible="GetVisible" tag="conveniences" />
+				</group>
+				<group id="grpCalendar" label="Calendar" getVisible="GetVisible" tag="meetingpresets,conveniences">
+					<button id="btnMeetingPreset" label="New Meeting" size="large" imageMso="NewAppointment" keytip="MP" screentip="Meeting Preset" supertip="New meeting with a preset length and agenda, from scratch or from the selected email (phase 6)." onAction="OnPlanned" getVisible="GetVisible" tag="meetingpresets" />
+					<button id="btnEmailAttendees" label="Email Attendees" imageMso="NewMailMessage" keytip="EA" screentip="Email Attendees" supertip="New email to everyone invited to the selected meeting (phase 8)." onAction="OnPlanned" getVisible="GetVisible" tag="conveniences" />
+				</group>
+				<group id="grpFollowUp" label="Follow-up" getVisible="GetVisible" tag="followup">
+					<button id="btnFollowUps" label="Follow-ups" size="large" imageMso="FlagToday" keytip="FU" screentip="Follow-ups" supertip="Sent emails still waiting for a reply (phase 5)." onAction="OnPlanned" getVisible="GetVisible" tag="followup" />
+				</group>
+				<group id="grpProdigo" label="Prodigo">
+					<button id="btnSettings" label="Settings" size="large" imageMso="ControlProperties" keytip="ST" screentip="Prodigo Settings" supertip="Switch features on and off, Send later presets, and the log." onAction="OnSettings" />
+				</group>
+			</tab>
+		</tabs>
+	</ribbon>
+</customUI>
