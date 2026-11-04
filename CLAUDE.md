@@ -166,9 +166,10 @@ and `Until`.
 
 **Unverified Outlook behaviour that the design leans on.** Each item is in the
 README's test plan.
-- Custom named properties set on a `MeetingItem` during `ItemSend` persist into the
-  Outbox copy. If they don't, cleanup finds nothing and the +1 minute fallback
-  applies.
+- ~~Custom named properties set on a `MeetingItem` during `ItemSend` persist into the
+  Outbox copy.~~ **Verified 4 November 2026:** the Outbox copy of a delayed invite
+  carried `Id`, `Gen` and `To`. `DeferredDeliveryTime` also stuck on the invite, so
+  the `PR_DEFERRED_SEND_TIME` fallback wasn't needed.
 - `Delete()` works on a submitted, deferred Outbox item.
 - `MailItem.Send()` on an item already in the Outbox resubmits it, keeping its
   deferred time.
