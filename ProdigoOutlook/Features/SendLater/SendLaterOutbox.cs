@@ -170,10 +170,10 @@ namespace ProdigoOutlook.Features.SendLater
             PrMessageClass,                // 4
             ItemProps.DeferredDeliveryTime,// 5
             ItemProps.MessageFlags,        // 6
-            ItemProps.Schema(Stamp.Id),    // 7
-            ItemProps.Schema(Stamp.Gen),   // 8
-            ItemProps.Schema(Stamp.Kind),  // 9
-            ItemProps.Schema(Stamp.To),    // 10
+            ItemProps.TableSchema(Stamp.Id),    // 7
+            ItemProps.TableSchema(Stamp.Gen),   // 8
+            ItemProps.TableSchema(Stamp.Kind),  // 9
+            ItemProps.TableSchema(Stamp.To),    // 10
         };
 
         /// <summary>
@@ -471,7 +471,7 @@ namespace ProdigoOutlook.Features.SendLater
         private static bool FolderHasGen(ComScope com, Outlook.MAPIFolder folder, string gen)
         {
             if (string.IsNullOrEmpty(gen) || gen.IndexOf('\'') >= 0) return false;
-            string filter = "@SQL=\"" + ItemProps.Schema(Stamp.Gen) + "\" = '" + gen + "'";
+            string filter = "@SQL=\"" + ItemProps.TableSchema(Stamp.Gen) + "\" = '" + gen + "'";
             Outlook.Table table = com.Track(folder.GetTable(filter, Outlook.OlTableContents.olUserItems));
             return !table.EndOfTable;
         }

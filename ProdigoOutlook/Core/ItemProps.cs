@@ -43,10 +43,14 @@ namespace ProdigoOutlook.Core
         public const string DisplayTypeEx = "http://schemas.microsoft.com/mapi/proptag/0x39050003";
 
         /// <summary>
-        /// The full schema name of one of Prodigo's notes, for reading it from a folder's
-        /// table of contents (Folder.GetTable) without opening the item.
+        /// The full schema name of one of Prodigo's notes, typed as a string, for reading
+        /// it from a folder's table of contents (Folder.GetTable) or searching by it.
+        /// The "/0x0000001F" (PT_UNICODE) suffix is required there: as a table column
+        /// the untyped name is refused outright, and in a search filter it is accepted
+        /// but silently matches nothing. PropertyAccessor (Get/Set below) does not need
+        /// it - it takes the type from the value.
         /// </summary>
-        public static string Schema(string name) => NamedPrefix + name;
+        public static string TableSchema(string name) => NamedPrefix + name + "/0x0000001F";
 
         public static string Get(object item, string name)
         {

@@ -74,6 +74,14 @@ Strategy Manager at HiQ by day.
   - Read the Outbox through `Folder.GetTable` instead (`SendLaterOutbox.ReadTable`,
     `FindInOutbox`, `FolderHasGen`). It lists properties without opening anything.
   - Open an item only to act on it, and then send or delete it in the same step.
+  - In a table or a table filter, Prodigo's notes must use `ItemProps.TableSchema`,
+    which adds the `/0x0000001F` type suffix. As a column the untyped name throws
+    ("does not support this operation"); in a filter it silently matches nothing.
+    This was verified against Olle's real Outbox on 4 November 2026.
+  - Outlook can be queried read-only from Claude's shell
+    (`[Runtime.InteropServices.Marshal]::GetActiveObject("Outlook.Application")`
+    plus `GetTable`). Use that to test a table query on the real thing before
+    asking Olle to restart Outlook. Never open items that way.
 
 - **Don't release an inspector's own item** (`inspector.CurrentItem`), nor the
   appointment from `GetAssociatedAppointment` inside `ItemSend`. The window, or
