@@ -42,13 +42,16 @@ Signing → *Create Test Certificate*, the same fix as in the PowerPoint project
 
 ### If the Prodigo tab is missing
 
-1. **Turn on ribbon error messages:** File → Options → Advanced → Developers → *Show
+1. **Use Build → Rebuild Solution, not Build.** When Visual Studio thinks nothing has
+   changed, it skips the step that registers the add-in with Outlook. Then quit
+   Outlook completely and start it again.
+2. **Turn on ribbon error messages:** File → Options → Advanced → Developers → *Show
    add-in user interface errors*. One wrong attribute in a ribbon XML file makes
    Office drop the whole tab silently.
-2. **Check whether Outlook disabled it:** File → Options → Add-ins → Manage: *COM
+3. **Check whether Outlook disabled it:** File → Options → Add-ins → Manage: *COM
    Add-ins* → Go. *Prodigo for Outlook* should be ticked. Also check Manage:
    *Disabled Items*.
-3. **Slow-start warnings:** Outlook disables add-ins it considers slow to start and
+4. **Slow-start warnings:** Outlook disables add-ins it considers slow to start and
    shows a yellow bar about it. Prodigo does almost nothing at startup to avoid this.
    If it happens anyway, choose **Always enable this add-in** in that bar (or in
    File → Manage COM Add-ins).

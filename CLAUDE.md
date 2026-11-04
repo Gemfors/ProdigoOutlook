@@ -19,10 +19,20 @@ Strategy Manager at HiQ by day.
 
 - **Build:** MSBuild works in a Claude session on Olle's machine:
   `C:\Program Files\Microsoft Visual Studio\18\Insiders\MSBuild\Current\Bin\MSBuild.exe ProdigoOutlook.sln`.
-  Building, including from the command line, **registers the add-in** in
+  Building **registers the add-in** in
   `HKCU\Software\Microsoft\Office\Outlook\Addins\ProdigoOutlook` pointing at
   `bin\Debug`. So the next Outlook start runs whatever was last built in Olle's real
   mailbox. That's the agreed install method, the same as the other two add-ins.
+- **Claude's own shell is sandboxed, and its registry writes don't reach the real
+  registry.** A build there compiles fine, and its registration shows up when read
+  back from the same shell, but Outlook never sees it. This cost a debugging round on
+  4 November 2026.
+  - To register for real, run the build in Olle's Terminal panel, outside the
+    sandbox, with `/t:Rebuild`.
+  - Check with `reg query HKCU\Software\Microsoft\Office\Outlook\Addins` run there too.
+  - The same applies to anything else that must reach the real registry.
+- **Visual Studio skips registration when the build is up to date.** If the tab is
+  missing after a build, use Build → *Rebuild Solution*.
 - **Not an installer.** Olle tried one before and hit certificate problems. Don't
   push MSI or ClickOnce.
 - **Outlook locks the DLL** while running, including when it's only in the tray. The
