@@ -170,6 +170,10 @@ README's test plan.
   Outbox copy.~~ **Verified 4 November 2026:** the Outbox copy of a delayed invite
   carried `Id`, `Gen` and `To`. `DeferredDeliveryTime` also stuck on the invite, so
   the `PR_DEFERRED_SEND_TIME` fallback wasn't needed.
+- **Observed 4 November 2026:** sending an update (to all attendees) while the invite
+  waited left exactly one invite in the Outbox: the new one, at stamp + 1 minute.
+  Outlook itself had already removed the old one, so cleanup logged "replaced 0".
+  That's fine; cleanup remains the safety net for when Outlook doesn't do this.
 - `Delete()` works on a submitted, deferred Outbox item.
 - `MailItem.Send()` on an item already in the Outbox resubmits it, keeping its
   deferred time.
