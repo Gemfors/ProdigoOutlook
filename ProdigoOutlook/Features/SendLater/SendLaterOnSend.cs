@@ -125,8 +125,7 @@ namespace ProdigoOutlook.Features.SendLater
                 if (decision.ClearStamp) SendLaterOutbox.ClearStampLater(apptEntryId);
                 if (decision.CleanUp)
                 {
-                    SendLaterOutbox.NoteSent(id, gen, kind, immediate: !decision.Defer, recipients: recipients,
-                        appointmentEntryId: apptEntryId);
+                    SendLaterOutbox.NoteSent(id, gen, kind, immediate: !decision.Defer, recipients: recipients);
                     SendLaterOutbox.ScheduleCleanup(id);
                 }
             }

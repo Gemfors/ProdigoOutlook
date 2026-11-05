@@ -218,16 +218,14 @@ namespace ProdigoOutlook.LogicTests
             cancelOnly.RemovedCancelGens.Add("rmT");
             plan = SendLaterTime.PlanCleanup(testC, cancelOnly, true);
             Check("removal only: original invite kept for now", plan.First.Count + plan.Then.Count, 0);
-            Check("removal only: Prodigo sends the update itself", SendLaterTime.NeedsUpdateForRemoved(testC, cancelOnly, plan), true);
 
-            // Prodigo's update to a arrives, with the cancellation carried into the batch.
+            // A full update to a in the same batch as the cancellation (choosing "all attendees").
             var afterAuto = new List<WaitingMessage>(testC) { new WaitingMessage("auto", MeetingMessageKind.Request, new[] { "a@x" }) };
             var carried = new CleanupBatch { RequestGen = "auto", RequestRecipients = WaitingMessage.RecipientSet(new[] { "a@x" }) };
             carried.RemovedCancelGens.Add("rmT");
             plan = SendLaterTime.PlanCleanup(afterAuto, carried, true);
             Check("after the update: original invite replaced", string.Join(",", plan.First), "orig");
             Check("after the update: t gets nothing", string.Join(",", plan.Then), "rmT");
-            Check("after the update: no second update", SendLaterTime.NeedsUpdateForRemoved(afterAuto, carried, plan), false);
 
             // Removing the only attendee: nobody is left to need the invite.
             var onlyOne = new List<WaitingMessage>
@@ -237,11 +235,7 @@ namespace ProdigoOutlook.LogicTests
             };
             plan = SendLaterTime.PlanCleanup(onlyOne, cancelOnly, true);
             Check("removing the only attendee drops both", string.Join(",", plan.First) + "|" + string.Join(",", plan.Then), "orig|rmT");
-            Check("...and needs no update", SendLaterTime.NeedsUpdateForRemoved(onlyOne, cancelOnly, plan), false);
 
-            // Removing someone after a full update already replaced the original: no update needed.
-            Check("removal when no waiting invite includes them needs no update",
-                SendLaterTime.NeedsUpdateForRemoved(afterReplace, removedOnlyFor("rm"), SendLaterTime.PlanCleanup(afterReplace, removedOnlyFor("rm"), true)), false);
 
             Section("Which cancellation is it");
             // 5 Nov 2026: Outlook's Cancel Meeting arrived with the status not yet cancelled.

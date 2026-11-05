@@ -155,11 +155,13 @@ and `Until`.
    - A cancellation to removed attendees is deleted only if none of them is on an
      invite still going out.
    - If Outlook sends only that cancellation (its default, "Send updates only to
-     added or deleted attendees") while the invite waits, Prodigo sends the update
-     to the remaining attendees itself (`NeedsUpdateForRemoved`,
-     `SendUpdateForRemoved`), carrying the cancellation into the new batch. The old
-     invite and the cancellation are then both replaced. Olle approved this on
-     5 November 2026. It's the one place Prodigo sends something unprompted.
+     added or deleted attendees") while the invite waits, the original invite and
+     the cancellation both go out. Removing *every* attendee drops both.
+   - **Never send from cleanup or any timer.** On 5 November 2026 an automatic
+     `AppointmentItem.Send()` for exactly this case produced only another
+     cancellation to the removed person. That triggered another `Send()`, and the
+     loop filled Olle's Outbox until he quit Outlook. It was removed the same day.
+     Every `Send()` in Prodigo must follow a user's click or resubmit that same item.
    - A whole-meeting cancellation deletes everything for that meeting.
    - If nothing is ever confirmed, nothing is deleted. The +1 minute ordering is then
      the fallback.

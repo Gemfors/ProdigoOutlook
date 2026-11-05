@@ -266,27 +266,6 @@ namespace ProdigoOutlook.Features.SendLater
             return plan;
         }
 
-        /// <summary>
-        /// True when someone was removed from a meeting whose invite still waits, and
-        /// Outlook sent them a cancellation but no update to the others ("Send updates
-        /// only to added or deleted attendees", Outlook's default). The waiting invite
-        /// still lists the removed people, so it cannot simply go. Prodigo then sends the
-        /// update to the remaining attendees itself; with that in the batch, the old
-        /// invite and the cancellation are both replaced, and the removed people get
-        /// nothing at all.
-        /// </summary>
-        public static bool NeedsUpdateForRemoved(IList<WaitingMessage> waiting, CleanupBatch batch, CleanupPlan plan)
-        {
-            if (plan == null || batch.RequestGen != null || batch.WholeCancelGen != null || batch.RemovedCancelGens.Count == 0)
-                return false;
-
-            List<WaitingMessage> cancels = waiting
-                .Where(w => batch.RemovedCancelGens.Contains(w.Gen) && w.Recipients != null && !plan.Then.Contains(w.Gen))
-                .ToList();
-            return waiting
-                .Where(w => w.Kind == MeetingMessageKind.Request && w.Recipients != null && !plan.First.Contains(w.Gen))
-                .Any(w => cancels.Any(c => c.Recipients.Overlaps(w.Recipients)));
-        }
     }
 
     internal sealed class SendLaterPreset
@@ -371,8 +350,6 @@ namespace ProdigoOutlook.Features.SendLater
         public List<string> RemovedCancelGens { get; } = new List<string>();
         /// <summary>Sent without delay (Send now), so it may already have left the Outbox.</summary>
         public bool Immediate { get; set; }
-        /// <summary>The organizer's appointment, for sending the update to the remaining attendees.</summary>
-        public string AppointmentEntryId { get; set; }
 
         /// <summary>The message whose arrival in the Outbox proves the send went through.</summary>
         public string ProofGen => WholeCancelGen ?? RequestGen ?? RemovedCancelGens.LastOrDefault();

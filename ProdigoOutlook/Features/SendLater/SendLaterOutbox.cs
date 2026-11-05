@@ -363,13 +363,11 @@ namespace ProdigoOutlook.Features.SendLater
         // ---------------------------------------------------------------
 
         /// <summary>Records a message just sent for a meeting, as part of the current batch.</summary>
-        public static void NoteSent(string meetingId, string gen, MeetingMessageKind kind, bool immediate, List<string> recipients,
-            string appointmentEntryId)
+        public static void NoteSent(string meetingId, string gen, MeetingMessageKind kind, bool immediate, List<string> recipients)
         {
             CleanupBatch batch;
             if (!Batches.TryGetValue(meetingId, out batch))
                 Batches[meetingId] = batch = new CleanupBatch();
-            if (appointmentEntryId != null) batch.AppointmentEntryId = appointmentEntryId;
 
             switch (kind)
             {
@@ -441,54 +439,10 @@ namespace ProdigoOutlook.Features.SendLater
 
             Log.Info("Send later: replaced " + deleted + " waiting message(s) for meeting " + meetingId);
 
-            var waitingMessages = waiting.Select(e => new WaitingMessage(e.Gen, e.Kind, e.Recipients)).ToList();
-            if (SendLaterTime.NeedsUpdateForRemoved(waitingMessages, batch, plan))
-                SendUpdateForRemoved(meetingId, batch);
-        }
-
-        /// <summary>
-        /// Sends the meeting again to the attendees still on it, so that the waiting
-        /// invite (which still lists the removed people) and the cancellation to them can
-        /// both be replaced. The cancellation is carried into the new batch, so the
-        /// cleanup after this send counts the removed people as accounted for. If
-        /// anything fails, nothing is deleted: everyone gets the original invite, and
-        /// the removed people the cancellation after it - the same as without this.
-        /// </summary>
-        private static void SendUpdateForRemoved(string meetingId, CleanupBatch earlier)
-        {
-            if (string.IsNullOrEmpty(earlier.AppointmentEntryId)) return;
-
-            var carried = new CleanupBatch { AppointmentEntryId = earlier.AppointmentEntryId };
-            carried.RemovedCancelGens.AddRange(earlier.RemovedCancelGens);
-            Batches[meetingId] = carried;
-
-            Later.Run(TimeSpan.FromSeconds(1), "Send later update for removed attendees", () =>
-            {
-                var appt = Ol.ItemById(carried.AppointmentEntryId) as Outlook.AppointmentItem;
-                try
-                {
-                    if (appt == null) throw new InvalidOperationException("appointment not found");
-                    Log.Info("Send later: someone was removed while the invite waits; sending the update to the remaining attendees");
-                    appt.Send();
-                }
-                catch (Exception ex)
-                {
-                    Log.Warn("Send later: could not send the update for removed attendees; the original invite and the cancellation stay", ex);
-                    if (Batches.TryGetValue(meetingId, out CleanupBatch b) && b == carried) Batches.Remove(meetingId);
-                }
-                finally
-                {
-                    ComScope.Release(appt);
-                }
-            });
-
-            // If the update never reaches ItemSend, don't leave the carried batch to be
-            // picked up by some later, unrelated send.
-            Later.Run(TimeSpan.FromSeconds(60), "Send later forget carried batch", () =>
-            {
-                if (Batches.TryGetValue(meetingId, out CleanupBatch b) && b == carried && b.RequestGen == null)
-                    Batches.Remove(meetingId);
-            });
+            // Never send anything from here. On 5 November 2026 an automatic
+            // AppointmentItem.Send() after a removed-attendee cancellation produced
+            // only another cancellation, which triggered another Send(): a loop that
+            // filled the Outbox. Cleanup only ever deletes.
         }
 
         /// <summary>Looks for a message by its Gen in the whole Outbox, or in recent Sent Items.</summary>
