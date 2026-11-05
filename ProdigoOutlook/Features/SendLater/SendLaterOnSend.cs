@@ -141,9 +141,14 @@ namespace ProdigoOutlook.Features.SendLater
             if (cls.IndexOf("Canceled", StringComparison.OrdinalIgnoreCase) < 0)
                 return MeetingMessageKind.Request;
 
-            return appt.MeetingStatus == Outlook.OlMeetingStatus.olMeetingCanceled
-                ? MeetingMessageKind.CancelWholeMeeting
-                : MeetingMessageKind.CancelRemovedAttendees;
+            // MeetingStatus alone is not enough: on 5 November 2026 Outlook's own Cancel
+            // Meeting arrived here with the status not yet set to cancelled. Who the
+            // cancellation goes to settles it - see SendLaterTime.CancellationKind.
+            bool statusSaysCanceled = false;
+            try { statusSaysCanceled = appt.MeetingStatus == Outlook.OlMeetingStatus.olMeetingCanceled; } catch { }
+            return SendLaterTime.CancellationKind(statusSaysCanceled,
+                SendLaterOutbox.RecipientAddresses(meeting.Recipients),
+                SendLaterOutbox.RecipientAddresses(appt.Recipients));
         }
 
         internal static string SafeEntryId(object item)

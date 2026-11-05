@@ -186,6 +186,26 @@ namespace ProdigoOutlook.Features.SendLater
         }
 
         /// <summary>
+        /// Whether a cancellation is for the whole meeting or only for people removed
+        /// from it. Outlook's cancellation to removed people goes only to people no
+        /// longer on the meeting; a whole-meeting cancellation goes to the attendees
+        /// themselves. So if anyone it goes to is still an attendee, the meeting itself
+        /// is being cancelled. When the recipients are unknown, it counts as one to
+        /// removed people, which deletes less.
+        /// </summary>
+        public static MeetingMessageKind CancellationKind(bool statusSaysCanceled,
+            IEnumerable<string> cancelRecipients, IEnumerable<string> attendees)
+        {
+            if (statusSaysCanceled) return MeetingMessageKind.CancelWholeMeeting;
+            if (cancelRecipients == null || attendees == null) return MeetingMessageKind.CancelRemovedAttendees;
+
+            HashSet<string> still = WaitingMessage.RecipientSet(attendees);
+            return WaitingMessage.RecipientSet(cancelRecipients).Overlaps(still)
+                ? MeetingMessageKind.CancelWholeMeeting
+                : MeetingMessageKind.CancelRemovedAttendees;
+        }
+
+        /// <summary>
         /// Decides which waiting messages to delete once a new message for the same
         /// meeting is safely in the Outbox. Returns null when there is no proof yet that
         /// the new message got there: deleting the old invite before then could leave
@@ -200,7 +220,10 @@ namespace ProdigoOutlook.Features.SendLater
 
             var plan = new CleanupPlan();
 
-            if (batch.WholeCancelGen != null)
+            // A whole-meeting cancellation never comes in the same press of Send as an
+            // update. If both are here, the "whole" one was misjudged and was really for
+            // removed people: deleting everything would leave the rest with nothing.
+            if (batch.WholeCancelGen != null && batch.RequestGen == null)
             {
                 // The meeting was cancelled before anyone heard of it: nobody needs to hear
                 // anything, the cancellation included.
@@ -218,7 +241,7 @@ namespace ProdigoOutlook.Features.SendLater
             {
                 var covered = new HashSet<string>(batch.RequestRecipients, StringComparer.OrdinalIgnoreCase);
                 foreach (WaitingMessage w in waiting)
-                    if (w.Recipients != null && batch.RemovedCancelGens.Contains(w.Gen))
+                    if (w.Recipients != null && (batch.RemovedCancelGens.Contains(w.Gen) || w.Gen == batch.WholeCancelGen))
                         covered.UnionWith(w.Recipients);
 
                 plan.First.AddRange(waiting

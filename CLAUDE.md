@@ -179,9 +179,13 @@ README's test plan.
   deferred time.
 - `AppointmentItem.Delete()` on a sent meeting sends no cancellation. If it does,
   cleanup removes it.
-- In a whole-meeting cancellation's `ItemSend`, `MeetingStatus` is already
-  `olMeetingCanceled`. If it isn't, the cancellation is treated as one to removed
-  attendees, and every waiting invite is still deleted.
+- ~~In a whole-meeting cancellation's `ItemSend`, `MeetingStatus` is already
+  `olMeetingCanceled`.~~ **Wrong, found 5 November 2026:** Outlook's Cancel Meeting
+  arrived with the status not yet cancelled, so it was treated as a cancellation to
+  removed attendees. The updated invite and the cancellation both went to Gmail at
+  the delivery time. `SendLaterTime.CancellationKind` now also decides by recipient:
+  a cancellation to anyone still on the meeting cancels the whole meeting.
+  `PlanCleanup` ignores a "whole" cancellation sent in the same press as an update.
 
 ## Phase 4: Todo Kanban
 

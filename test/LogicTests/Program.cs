@@ -193,6 +193,30 @@ namespace ProdigoOutlook.LogicTests
             plan = SendLaterTime.PlanCleanup(waiting, removedOnly, true);
             Check("removal with no new invite deletes no invite", plan.First.Count, 0);
             Check("...and keeps the cancellation", plan.Then.Count, 0);
+
+            // A "whole" cancellation sent in the same press as an update was misjudged:
+            // it must not wipe out the update everyone else is waiting for.
+            var mixed = new CleanupBatch { RequestGen = "new", RequestRecipients = WaitingMessage.RecipientSet(new[] { "a@x", "b@x" }), WholeCancelGen = "cx" };
+            var mixedWaiting = new List<WaitingMessage>
+            {
+                new WaitingMessage("old", MeetingMessageKind.Request, new[] { "a@x", "b@x", "c@x" }),
+                new WaitingMessage("new", MeetingMessageKind.Request, new[] { "a@x", "b@x" }),
+                new WaitingMessage("cx", MeetingMessageKind.CancelWholeMeeting, new[] { "c@x" }),
+            };
+            plan = SendLaterTime.PlanCleanup(mixedWaiting, mixed, true);
+            Check("misjudged whole cancel with an update keeps the update", plan.First.Contains("new"), false);
+            Check("...and still replaces the old invite", string.Join(",", plan.First), "old");
+
+            Section("Which cancellation is it");
+            // 5 Nov 2026: Outlook's Cancel Meeting arrived with the status not yet cancelled.
+            Check("cancellation to an attendee is the whole meeting",
+                SendLaterTime.CancellationKind(false, new[] { "Gmail@x" }, new[] { "me@x", "gmail@x" }), MeetingMessageKind.CancelWholeMeeting);
+            Check("cancellation to someone no longer on it is for removed people",
+                SendLaterTime.CancellationKind(false, new[] { "c@x" }, new[] { "me@x", "a@x" }), MeetingMessageKind.CancelRemovedAttendees);
+            Check("status says cancelled wins",
+                SendLaterTime.CancellationKind(true, new[] { "c@x" }, new[] { "a@x" }), MeetingMessageKind.CancelWholeMeeting);
+            Check("unknown recipients count as removed people",
+                SendLaterTime.CancellationKind(false, null, new[] { "a@x" }), MeetingMessageKind.CancelRemovedAttendees);
         }
 
         private static void Stored()
