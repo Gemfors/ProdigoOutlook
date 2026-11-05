@@ -237,16 +237,19 @@ namespace ProdigoOutlook.Features.SendLater
             // meeting, sends a new invite to a few people - and deleting the original
             // then would leave everyone else with nothing. Unknown recipients (an
             // untagged message) count as "not covered".
-            if (batch.RequestGen != null && batch.RequestRecipients != null)
+            // With no new invite in the batch, only the removed people count: removing
+            // everyone an old invite went to means nobody needs it any more.
+            if (batch.RequestGen == null ? batch.RemovedCancelGens.Count > 0 : batch.RequestRecipients != null)
             {
-                var covered = new HashSet<string>(batch.RequestRecipients, StringComparer.OrdinalIgnoreCase);
+                var covered = new HashSet<string>(
+                    batch.RequestRecipients ?? Enumerable.Empty<string>(), StringComparer.OrdinalIgnoreCase);
                 foreach (WaitingMessage w in waiting)
                     if (w.Recipients != null && (batch.RemovedCancelGens.Contains(w.Gen) || w.Gen == batch.WholeCancelGen))
                         covered.UnionWith(w.Recipients);
 
                 plan.First.AddRange(waiting
                     .Where(w => w.Kind == MeetingMessageKind.Request && w.Gen != batch.RequestGen)
-                    .Where(w => w.Recipients != null && w.Recipients.IsSubsetOf(covered))
+                    .Where(w => w.Recipients != null && w.Recipients.Count > 0 && w.Recipients.IsSubsetOf(covered))
                     .Select(w => w.Gen));
             }
 
@@ -261,6 +264,28 @@ namespace ProdigoOutlook.Features.SendLater
                 .Where(w => !remaining.Any(r => r.Recipients == null || r.Recipients.Overlaps(w.Recipients)))
                 .Select(w => w.Gen));
             return plan;
+        }
+
+        /// <summary>
+        /// True when someone was removed from a meeting whose invite still waits, and
+        /// Outlook sent them a cancellation but no update to the others ("Send updates
+        /// only to added or deleted attendees", Outlook's default). The waiting invite
+        /// still lists the removed people, so it cannot simply go. Prodigo then sends the
+        /// update to the remaining attendees itself; with that in the batch, the old
+        /// invite and the cancellation are both replaced, and the removed people get
+        /// nothing at all.
+        /// </summary>
+        public static bool NeedsUpdateForRemoved(IList<WaitingMessage> waiting, CleanupBatch batch, CleanupPlan plan)
+        {
+            if (plan == null || batch.RequestGen != null || batch.WholeCancelGen != null || batch.RemovedCancelGens.Count == 0)
+                return false;
+
+            List<WaitingMessage> cancels = waiting
+                .Where(w => batch.RemovedCancelGens.Contains(w.Gen) && w.Recipients != null && !plan.Then.Contains(w.Gen))
+                .ToList();
+            return waiting
+                .Where(w => w.Kind == MeetingMessageKind.Request && w.Recipients != null && !plan.First.Contains(w.Gen))
+                .Any(w => cancels.Any(c => c.Recipients.Overlaps(w.Recipients)));
         }
     }
 
@@ -346,6 +371,8 @@ namespace ProdigoOutlook.Features.SendLater
         public List<string> RemovedCancelGens { get; } = new List<string>();
         /// <summary>Sent without delay (Send now), so it may already have left the Outbox.</summary>
         public bool Immediate { get; set; }
+        /// <summary>The organizer's appointment, for sending the update to the remaining attendees.</summary>
+        public string AppointmentEntryId { get; set; }
 
         /// <summary>The message whose arrival in the Outbox proves the send went through.</summary>
         public string ProofGen => WholeCancelGen ?? RequestGen ?? RemovedCancelGens.LastOrDefault();

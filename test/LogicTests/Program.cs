@@ -207,6 +207,42 @@ namespace ProdigoOutlook.LogicTests
             Check("misjudged whole cancel with an update keeps the update", plan.First.Contains("new"), false);
             Check("...and still replaces the old invite", string.Join(",", plan.First), "old");
 
+            // Test C, 5 Nov 2026: invite waits for a and t; t is removed with "send only to
+            // added or deleted attendees", so only a cancellation to t is sent.
+            var testC = new List<WaitingMessage>
+            {
+                new WaitingMessage("orig", MeetingMessageKind.Request, new[] { "a@x", "t@x" }),
+                new WaitingMessage("rmT", MeetingMessageKind.CancelRemovedAttendees, new[] { "t@x" }),
+            };
+            var cancelOnly = new CleanupBatch();
+            cancelOnly.RemovedCancelGens.Add("rmT");
+            plan = SendLaterTime.PlanCleanup(testC, cancelOnly, true);
+            Check("removal only: original invite kept for now", plan.First.Count + plan.Then.Count, 0);
+            Check("removal only: Prodigo sends the update itself", SendLaterTime.NeedsUpdateForRemoved(testC, cancelOnly, plan), true);
+
+            // Prodigo's update to a arrives, with the cancellation carried into the batch.
+            var afterAuto = new List<WaitingMessage>(testC) { new WaitingMessage("auto", MeetingMessageKind.Request, new[] { "a@x" }) };
+            var carried = new CleanupBatch { RequestGen = "auto", RequestRecipients = WaitingMessage.RecipientSet(new[] { "a@x" }) };
+            carried.RemovedCancelGens.Add("rmT");
+            plan = SendLaterTime.PlanCleanup(afterAuto, carried, true);
+            Check("after the update: original invite replaced", string.Join(",", plan.First), "orig");
+            Check("after the update: t gets nothing", string.Join(",", plan.Then), "rmT");
+            Check("after the update: no second update", SendLaterTime.NeedsUpdateForRemoved(afterAuto, carried, plan), false);
+
+            // Removing the only attendee: nobody is left to need the invite.
+            var onlyOne = new List<WaitingMessage>
+            {
+                new WaitingMessage("orig", MeetingMessageKind.Request, new[] { "t@x" }),
+                new WaitingMessage("rmT", MeetingMessageKind.CancelRemovedAttendees, new[] { "t@x" }),
+            };
+            plan = SendLaterTime.PlanCleanup(onlyOne, cancelOnly, true);
+            Check("removing the only attendee drops both", string.Join(",", plan.First) + "|" + string.Join(",", plan.Then), "orig|rmT");
+            Check("...and needs no update", SendLaterTime.NeedsUpdateForRemoved(onlyOne, cancelOnly, plan), false);
+
+            // Removing someone after a full update already replaced the original: no update needed.
+            Check("removal when no waiting invite includes them needs no update",
+                SendLaterTime.NeedsUpdateForRemoved(afterReplace, removedOnlyFor("rm"), SendLaterTime.PlanCleanup(afterReplace, removedOnlyFor("rm"), true)), false);
+
             Section("Which cancellation is it");
             // 5 Nov 2026: Outlook's Cancel Meeting arrived with the status not yet cancelled.
             Check("cancellation to an attendee is the whole meeting",
@@ -227,6 +263,13 @@ namespace ProdigoOutlook.LogicTests
             Check("stored is UTC text", TimeHelpers.ToStored(local).EndsWith("Z"), true);
             Check("garbage reads as null", TimeHelpers.FromStored("tomorrow"), (DateTime?)null);
             Check("4501 is no date", TimeHelpers.IsNoDate(TimeHelpers.OutlookNoDate), true);
+        }
+
+        private static CleanupBatch removedOnlyFor(string gen)
+        {
+            var b = new CleanupBatch();
+            b.RemovedCancelGens.Add(gen);
+            return b;
         }
 
         private static void Section(string name)

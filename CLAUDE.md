@@ -154,6 +154,12 @@ and `Until`.
      invite everyone else was waiting for. An untagged old invite is never deleted.
    - A cancellation to removed attendees is deleted only if none of them is on an
      invite still going out.
+   - If Outlook sends only that cancellation (its default, "Send updates only to
+     added or deleted attendees") while the invite waits, Prodigo sends the update
+     to the remaining attendees itself (`NeedsUpdateForRemoved`,
+     `SendUpdateForRemoved`), carrying the cancellation into the new batch. The old
+     invite and the cancellation are then both replaced. Olle approved this on
+     5 November 2026. It's the one place Prodigo sends something unprompted.
    - A whole-meeting cancellation deletes everything for that meeting.
    - If nothing is ever confirmed, nothing is deleted. The +1 minute ordering is then
      the fallback.
