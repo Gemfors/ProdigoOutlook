@@ -66,7 +66,7 @@ namespace ProdigoOutlook.Features.SendLater
             {
                 ItemProps.Set(mail, Stamp.Until, null);
                 SendLaterOutbox.ClearDeferred(mail);
-                Log.Info("Send later: email \"" + mail.Subject + "\" sent now");
+                Log.Info("Send later: email " + Log.Item(SendLaterOnSend.SafeEntryId(mail)) + " sent now");
             }
             else
             {

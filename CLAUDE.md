@@ -76,7 +76,9 @@ Strategy Manager at HiQ by day.
   - Status checks are fine: whether something was sent or is queued, and its time.
   - Query only status columns (EntryID, message class, times, `PR_MESSAGE_FLAGS`,
     Prodigo's Id/Gen/Kind tags), never Subject, To or the body.
-  - Prodigo's log names meeting subjects, so read only the lines you need.
+  - Prodigo's log never names subjects or recipients. Use `Log.Meeting(id)` or
+    `Log.Item(entryId)`. Logs from before 10 November 2026 may still contain
+    subjects, so don't read them.
   - Debug with made-up text.
 
 - **Never open an Outbox item just to look at it.** Opening one through the object

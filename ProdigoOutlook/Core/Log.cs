@@ -30,6 +30,19 @@ namespace ProdigoOutlook.Core
 
         public static void Info(string message) => Write("INFO ", message, null);
 
+        /// <summary>
+        /// How the log names an item: never by subject or recipients (Olle's rule,
+        /// 10 November 2026; the log is read when troubleshooting). A meeting goes by
+        /// Prodigo's own meeting number, anything else by the end of its Outlook ID,
+        /// which is enough to tell items apart in one day's log.
+        /// </summary>
+        public static string Item(string entryId) =>
+            string.IsNullOrEmpty(entryId) ? "an unsaved item"
+            : "item ..." + (entryId.Length > 8 ? entryId.Substring(entryId.Length - 8) : entryId);
+
+        public static string Meeting(string meetingId) =>
+            string.IsNullOrEmpty(meetingId) ? "a meeting" : "meeting " + meetingId;
+
         public static void Warn(string message, Exception ex = null) => Write("WARN ", message, ex);
 
         public static void Error(string message, Exception ex = null) => Write("ERROR", message, ex);

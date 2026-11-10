@@ -158,7 +158,7 @@ namespace ProdigoOutlook.Features.SendLater
                         MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button1);
                     if (answer != DialogResult.Yes)
                     {
-                        Log.Info("OutboxGuard: user left \"" + _subject + "\" unsent in the Outbox");
+                        Log.Info("OutboxGuard: user left " + Log.Item(_entryId) + " unsent in the Outbox");
                         return;
                     }
                 }
@@ -172,14 +172,14 @@ namespace ProdigoOutlook.Features.SendLater
                     if (item is Outlook.MeetingItem meeting)
                     {
                         Resubmit(meeting, () => meeting.Send());
-                        Log.Info("OutboxGuard: put the invite \"" + _subject + "\" back in the send queue");
+                        Log.Info("OutboxGuard: put the invite " + Log.Item(_entryId) + " back in the send queue");
                         return;
                     }
 
                     if (item is Outlook.MailItem mail)
                     {
                         Resubmit(mail, () => mail.Send());
-                        Log.Info("OutboxGuard: put the email \"" + _subject + "\" back in the send queue");
+                        Log.Info("OutboxGuard: put the email " + Log.Item(_entryId) + " back in the send queue");
                     }
                 }
                 catch (Exception ex)

@@ -102,7 +102,7 @@ namespace ProdigoOutlook.Features.SendLater
                 DateTime? latestWaiting = waiting.Count > 0 ? waiting.Max(e => e.DeliverAt) : (DateTime?)null;
 
                 MeetingDecision decision = SendLaterTime.Decide(kind, until, queued, command, now, latestWaiting);
-                Log.Info("Send later: meeting \"" + appt.Subject + "\", " + kind + ", " + decision.Reason +
+                Log.Info("Send later: " + Log.Meeting(id) + ", " + kind + ", " + decision.Reason +
                          (decision.Defer ? ", deliver " + TimeHelpers.Friendly(decision.DeliverAt) : ""));
 
                 if (!decision.Defer && !decision.CleanUp && !decision.ClearStamp) return;

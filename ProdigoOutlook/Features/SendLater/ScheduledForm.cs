@@ -190,7 +190,8 @@ namespace ProdigoOutlook.Features.SendLater
                     if (overdue) SendLaterOutbox.ClearDeferred(meeting);
                     meeting.Send();
                 }
-                Log.Info("Scheduled: put \"" + entry.Subject + "\" back in the send queue" + (overdue ? ", sending now" : ""));
+                Log.Info("Scheduled: put " + (entry.IsMeeting ? Log.Meeting(entry.MeetingId) : Log.Item(entry.EntryId)) +
+                         " back in the send queue" + (overdue ? ", sending now" : ""));
             }
             finally
             {
@@ -277,7 +278,7 @@ namespace ProdigoOutlook.Features.SendLater
             {
                 try { appt.Delete(); } finally { ComScope.Release(appt); }
             }
-            Log.Info("Scheduled: cancelled meeting \"" + entry.Subject + "\" before delivery");
+            Log.Info("Scheduled: cancelled " + Log.Meeting(entry.MeetingId) + " before delivery");
         }
 
         private void OpenEntry(OutboxEntry entry)
