@@ -26,7 +26,7 @@ namespace ProdigoOutlook.Core
         private readonly Dictionary<string, CheckBox> _featureBoxes = new Dictionary<string, CheckBox>();
         private TextBox _presets;
         private CheckBox _roomWarning;
-        private TextBox _workStart, _workEnd, _openListEn, _openListSv, _openSentEn, _openSentSv;
+        private TextBox _workStart, _workEnd, _lunchStart, _lunchEnd, _openListEn, _openListSv, _openSentEn, _openSentSv;
         private readonly Dictionary<DayOfWeek, CheckBox> _dayBoxes = new Dictionary<DayOfWeek, CheckBox>();
         private NumericUpDown _buffer;
         private Label _error;
@@ -109,6 +109,15 @@ namespace ProdigoOutlook.Core
             avail.Controls.Add(_workEnd);
             ay += 32;
 
+            avail.Controls.Add(new Label { Text = "Lunch:", Left = 12, Top = ay + 4, Width = 110 });
+            _lunchStart = new TextBox { Left = 126, Top = ay, Width = 60, Text = _edit.AvailabilityLunchStart };
+            avail.Controls.Add(_lunchStart);
+            avail.Controls.Add(new Label { Text = "to", Left = 192, Top = ay + 4, Width = 24 });
+            _lunchEnd = new TextBox { Left = 218, Top = ay, Width = 60, Text = _edit.AvailabilityLunchEnd };
+            avail.Controls.Add(_lunchEnd);
+            avail.Controls.Add(new Label { Text = "(never offered; empty for none)", Left = 286, Top = ay + 4, Width = width - 298, ForeColor = SystemColors.GrayText });
+            ay += 32;
+
             avail.Controls.Add(new Label { Text = "Working days:", Left = 12, Top = ay + 4, Width = 110 });
             HashSet<DayOfWeek> days = AvailabilityText.ParseDays(_edit.AvailabilityWorkDays)
                                       ?? AvailabilityText.ParseDays(Defaults.AvailabilityWorkDays);
@@ -187,6 +196,13 @@ namespace ProdigoOutlook.Core
                 _error.Text = "Working hours: write two times such as 08:00 and 17:00, the second after the first.";
                 return;
             }
+            bool noLunch = _lunchStart.Text.Trim().Length == 0 && _lunchEnd.Text.Trim().Length == 0;
+            TimeSpan? lunchStart = AvailabilityText.ParseTime(_lunchStart.Text), lunchEnd = AvailabilityText.ParseTime(_lunchEnd.Text);
+            if (!noLunch && (!lunchStart.HasValue || !lunchEnd.HasValue || lunchEnd.Value <= lunchStart.Value))
+            {
+                _error.Text = "Lunch: write two times such as 12:00 and 13:00, or leave both empty for no lunch break.";
+                return;
+            }
             List<DayOfWeek> workDays = _dayBoxes.Where(kv => kv.Value.Checked).Select(kv => kv.Key).ToList();
             if (workDays.Count == 0)
             {
@@ -198,6 +214,8 @@ namespace ProdigoOutlook.Core
             _edit.AvailabilityWorkEnd = workEnd.Value.ToString(@"hh\:mm");
             _edit.AvailabilityWorkDays = AvailabilityText.DaysText(workDays);
             _edit.AvailabilityBuffer = (int)_buffer.Value;
+            _edit.AvailabilityLunchStart = noLunch ? string.Empty : lunchStart.Value.ToString(@"hh\:mm");
+            _edit.AvailabilityLunchEnd = noLunch ? string.Empty : lunchEnd.Value.ToString(@"hh\:mm");
             _edit.AvailabilityOpeningListEn = _openListEn.Text.Trim();
             _edit.AvailabilityOpeningListSv = _openListSv.Text.Trim();
             _edit.AvailabilityOpeningSentenceEn = _openSentEn.Text.Trim();

@@ -17,6 +17,8 @@ namespace ProdigoOutlook.Features.Availability
     /// - Earliest = the next whole or half hour from now. Everything is rounded to half
     ///   hours, inwards, so a range never reaches into a meeting.
     /// - Buffer around meetings: none by default, a setting.
+    /// - Changed the same day at Olle's request: working day from 08:30, and lunch
+    ///   12:00-13:00 never offered (a setting; empty means no lunch break).
     /// - At most 5 ranges; a list (default) or a sentence; Swedish or English.
     /// </summary>
     internal static class AvailabilityText
@@ -76,7 +78,8 @@ namespace ProdigoOutlook.Features.Availability
         /// Rules from the settings text. Anything unreadable falls back to the agreed
         /// default (08:00-17:00, Monday to Friday), never to "no working hours".
         /// </summary>
-        public static AvailabilityRules Rules(string workStart, string workEnd, string workDays, int bufferMinutes)
+        public static AvailabilityRules Rules(string workStart, string workEnd, string workDays, int bufferMinutes,
+            string lunchStart, string lunchEnd)
         {
             var rules = new AvailabilityRules();
             TimeSpan? s = ParseTime(workStart), e = ParseTime(workEnd);
@@ -88,6 +91,12 @@ namespace ProdigoOutlook.Features.Availability
             HashSet<DayOfWeek> days = ParseDays(workDays);
             if (days != null) rules.WorkDays = days;
             rules.Buffer = TimeSpan.FromMinutes(Math.Max(0, Math.Min(240, bufferMinutes)));
+            TimeSpan? ls = ParseTime(lunchStart), le = ParseTime(lunchEnd);
+            if (ls.HasValue && le.HasValue && le.Value > ls.Value)
+            {
+                rules.LunchStart = ls;
+                rules.LunchEnd = le;
+            }
             return rules;
         }
 
@@ -131,8 +140,14 @@ namespace ProdigoOutlook.Features.Availability
             List<TimeRange> blocked = busy
                 .Select(b => new TimeRange(b.Start - rules.Buffer, b.End + rules.Buffer))
                 .Where(b => b.End > b.Start)
-                .OrderBy(b => b.Start)
                 .ToList();
+
+            // Lunch is blocked like a meeting, but without the buffer: it is not a meeting.
+            if (rules.LunchStart.HasValue && rules.LunchEnd.HasValue && rules.LunchEnd.Value > rules.LunchStart.Value)
+                for (DateTime day = firstDay.Date; day <= lastDay.Date; day = day.AddDays(1))
+                    blocked.Add(new TimeRange(day + rules.LunchStart.Value, day + rules.LunchEnd.Value));
+
+            blocked = blocked.OrderBy(b => b.Start).ToList();
 
             DateTime earliest = RoundUp(now);
             var result = new List<TimeRange>();
@@ -220,7 +235,12 @@ namespace ProdigoOutlook.Features.Availability
         /// The text to insert. Lines are separated by "\n"; the caller turns them into
         /// paragraphs. Null when there is nothing to offer.
         /// </summary>
-        public static string Format(IList<TimeRange> ranges, AvailabilityFormat format, AvailabilityLanguage lang, string opening)
+        /// <param name="bullet">
+        /// Put before each list line: "• " for a plain-text email and the preview, ""
+        /// when the lines get real Word bullets after inserting.
+        /// </param>
+        public static string Format(IList<TimeRange> ranges, AvailabilityFormat format, AvailabilityLanguage lang, string opening,
+            string bullet = "• ")
         {
             if (ranges == null || ranges.Count == 0) return null;
             opening = (opening ?? string.Empty).Trim();
@@ -232,7 +252,7 @@ namespace ProdigoOutlook.Features.Availability
                 for (int i = 0; i < ranges.Count; i++)
                 {
                     if (i > 0) sb.Append('\n');
-                    sb.Append("- ").Append(Day(ranges[i].Start, lang)).Append(", ").Append(Range(ranges[i]));
+                    sb.Append(bullet ?? string.Empty).Append(Day(ranges[i].Start, lang)).Append(", ").Append(Range(ranges[i]));
                 }
                 return sb.ToString();
             }
@@ -261,14 +281,57 @@ namespace ProdigoOutlook.Features.Availability
             "hi", "hello", "thanks", "regards", "best", "would", "also", "or", "from", "of", "dear",
         };
 
+        private const int DecisiveLead = 5;
+
+        private static readonly string[] HeaderLabels =
+        {
+            "from:", "sent:", "to:", "cc:", "bcc:", "subject:", "date:",
+            "från:", "skickat:", "till:", "kopia:", "ämne:", "datum:",
+        };
+
+        /// <summary>
+        /// The part of the email worth judging the language by: header lines of quoted
+        /// emails ("From:", "To:" - in the language of Outlook, not of the email) and
+        /// lines with addresses or links are dropped, and only the first 600 characters
+        /// of what remains are used. What is nearest the top - what Olle has written and
+        /// the start of the email he replies to - decides, not the long English
+        /// disclaimers further down (found on 10 November 2026: a Swedish reply came out
+        /// undecided because of them).
+        /// </summary>
+        public static string LanguageSample(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return text;
+            var sb = new StringBuilder();
+            foreach (string raw in text.Split(new[] { "\r\n", "\n", "\r", "\v" }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string line = raw.Trim();
+                if (line.Length == 0) continue;
+                string lower = line.ToLowerInvariant();
+                if (HeaderLabels.Any(h => lower.StartsWith(h))) continue;
+                if (lower.Contains("@") || lower.Contains("http")) continue;
+                sb.Append(line).Append(' ');
+                if (sb.Length >= 600) break;
+            }
+            return sb.Length > 600 ? sb.ToString(0, 600) : sb.ToString();
+        }
+
         /// <summary>
         /// Swedish or English from the email's text (including the quoted thread), or
         /// null when there is too little to tell - the caller then uses the last choice.
         /// </summary>
         public static AvailabilityLanguage? DetectLanguage(string text)
         {
+            int sv, en;
+            return DetectLanguage(text, out sv, out en);
+        }
+
+        /// <summary>The same, also giving the Swedish and English word counts, for the log.</summary>
+        public static AvailabilityLanguage? DetectLanguage(string text, out int sv, out int en)
+        {
+            sv = 0;
+            en = 0;
+            text = LanguageSample(text);
             if (string.IsNullOrWhiteSpace(text)) return null;
-            int sv = 0, en = 0;
             var word = new StringBuilder();
             foreach (char c in text + " ")
             {
@@ -280,6 +343,11 @@ namespace ProdigoOutlook.Features.Availability
                     else if (EnWords.Contains(w)) en++;
                     if (w.IndexOfAny(new[] { 'å', 'ä', 'ö', 'Å', 'Ä', 'Ö' }) >= 0) sv++;
                     word.Clear();
+
+                    // Read from the top, like a person would: once one language clearly
+                    // leads, that is the email's language, whatever disclaimer follows.
+                    if (sv - en >= DecisiveLead) return AvailabilityLanguage.Swedish;
+                    if (en - sv >= DecisiveLead) return AvailabilityLanguage.English;
                 }
             }
             if (sv + en < 3) return null;
@@ -312,6 +380,9 @@ namespace ProdigoOutlook.Features.Availability
             DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday,
         };
         public TimeSpan Buffer { get; set; } = TimeSpan.Zero;
+        /// <summary>Lunch, never offered, on every working day. Null start or end means no lunch break.</summary>
+        public TimeSpan? LunchStart { get; set; }
+        public TimeSpan? LunchEnd { get; set; }
     }
 
     internal enum AvailabilityPeriod { ThisWeek, NextWeek, NextTwoWeeks }

@@ -202,12 +202,14 @@ README's test plan.
 
 Agreed with Olle on 10 November 2026, before building (the full rules are in the
 `AvailabilityText` class comment and the README):
-- Working hours 08:00–17:00, Monday to Friday, set in Settings.
+- Working hours 08:30–17:00 (changed from 08:00 at his request the same day), Monday to
+  Friday, and lunch 12:00–13:00 never offered. All set in Settings.
 - Anything not marked Free counts as busy. Only his own default calendar is read.
 - Earliest time offered is the next half hour; edges are rounded inwards to half hours.
 - The buffer around meetings defaults to 0 and can be set in Settings.
 - At most 5 ranges, spread over the days. A list (default) or a sentence, Swedish or
-  English, with the language detected from the email text.
+  English, with the language detected from the email text. Lists get real Word bullets
+  (a "•" character in plain-text emails).
 - It reads the calendar and inserts text. Nothing else.
 
 Implementation notes:

@@ -198,8 +198,8 @@ The preview shows exactly what will be inserted. **Insert** puts it at the curso
 The window remembers your choices.
 
 What counts as free:
-- Within your working hours on your working days: 08:00–17:00, Monday to Friday,
-  unless you change them in Settings.
+- Within your working hours on your working days: 08:30–17:00, Monday to Friday,
+  unless you change them in Settings. Lunch, 12:00–13:00 by default, is never offered.
 - Outside anything in your own calendar that isn't marked **Free**. Busy, Tentative,
   Out of office and Working elsewhere all count as busy.
 - Only gaps the meeting fits in, starting no earlier than the next half hour from now.

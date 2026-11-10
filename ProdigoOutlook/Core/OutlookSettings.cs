@@ -54,6 +54,8 @@ namespace ProdigoOutlook.Core
         public string AvailabilityWorkEnd { get; set; } = Defaults.AvailabilityWorkEnd;
         public string AvailabilityWorkDays { get; set; } = Defaults.AvailabilityWorkDays;
         public int AvailabilityBuffer { get; set; } = Defaults.AvailabilityBuffer;
+        public string AvailabilityLunchStart { get; set; } = Defaults.AvailabilityLunchStart;
+        public string AvailabilityLunchEnd { get; set; } = Defaults.AvailabilityLunchEnd;
         public string AvailabilityOpeningListEn { get; set; } = Defaults.AvailabilityOpeningListEn;
         public string AvailabilityOpeningListSv { get; set; } = Defaults.AvailabilityOpeningListSv;
         public string AvailabilityOpeningSentenceEn { get; set; } = Defaults.AvailabilityOpeningSentenceEn;
@@ -71,6 +73,8 @@ namespace ProdigoOutlook.Core
             ("availability.workend", s => s.AvailabilityWorkEnd, (s, v) => s.AvailabilityWorkEnd = v),
             ("availability.workdays", s => s.AvailabilityWorkDays, (s, v) => s.AvailabilityWorkDays = v),
             ("availability.buffer", s => s.AvailabilityBuffer.ToString(), (s, v) => { int n; if (int.TryParse(v, out n) && n >= 0 && n <= 240) s.AvailabilityBuffer = n; }),
+            ("availability.lunchstart", s => s.AvailabilityLunchStart, (s, v) => s.AvailabilityLunchStart = v),
+            ("availability.lunchend", s => s.AvailabilityLunchEnd, (s, v) => s.AvailabilityLunchEnd = v),
             ("availability.opening.list.en", s => s.AvailabilityOpeningListEn, (s, v) => s.AvailabilityOpeningListEn = v),
             ("availability.opening.list.sv", s => s.AvailabilityOpeningListSv, (s, v) => s.AvailabilityOpeningListSv = v),
             ("availability.opening.sentence.en", s => s.AvailabilityOpeningSentenceEn, (s, v) => s.AvailabilityOpeningSentenceEn = v),

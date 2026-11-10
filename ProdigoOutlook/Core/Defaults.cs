@@ -26,7 +26,10 @@ namespace ProdigoOutlook.Core
         public const bool SendLaterRoomWarning = true;
 
         // Insert availability (phase 3), agreed with Olle on 10 November 2026.
-        public const string AvailabilityWorkStart = "08:00";
+        public const string AvailabilityWorkStart = "08:30";
+        /// <summary>Never offered. Empty start and end mean no lunch break.</summary>
+        public const string AvailabilityLunchStart = "12:00";
+        public const string AvailabilityLunchEnd = "13:00";
         public const string AvailabilityWorkEnd = "17:00";
         public const string AvailabilityWorkDays = "mon,tue,wed,thu,fri";
         /// <summary>Minutes kept clear before and after each meeting.</summary>

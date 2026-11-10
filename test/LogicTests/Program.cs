@@ -336,7 +336,10 @@ namespace ProdigoOutlook.LogicTests
             };
             Check("English list",
                 AvailabilityText.Format(two, AvailabilityFormat.List, AvailabilityLanguage.English, "I'm available at the following times:"),
-                "I'm available at the following times:\n- Tue 10 Nov, 10:00–12:00\n- Wed 11 Nov, 14:00–17:00");
+                "I'm available at the following times:\n• Tue 10 Nov, 10:00–12:00\n• Wed 11 Nov, 14:00–17:00");
+            Check("list for real Word bullets: no bullet characters",
+                AvailabilityText.Format(two, AvailabilityFormat.List, AvailabilityLanguage.English, "", ""),
+                "Tue 10 Nov, 10:00–12:00\nWed 11 Nov, 14:00–17:00");
             Check("Swedish sentence",
                 AvailabilityText.Format(two, AvailabilityFormat.Sentence, AvailabilityLanguage.Swedish, "Jag kan"),
                 "Jag kan tis 10 nov 10:00–12:00 eller ons 11 nov 14:00–17:00.");
@@ -348,7 +351,19 @@ namespace ProdigoOutlook.LogicTests
             Check("time nonsense", AvailabilityText.ParseTime("eight"), (TimeSpan?)null);
             Check("days in Swedish", AvailabilityText.DaysText(AvailabilityText.ParseDays("mån, tis, onsdag")), "mon,tue,wed");
             Check("bad day refused", AvailabilityText.ParseDays("mon,funday"), (HashSet<DayOfWeek>)null);
-            AvailabilityRules fallback = AvailabilityText.Rules("17:00", "08:00", "nonsense", 15);
+            AvailabilityRules fallback = AvailabilityText.Rules("17:00", "08:00", "nonsense", 15, "13:00", "12:00");
+            Check("lunch the wrong way round means no lunch break", fallback.LunchStart.HasValue, false);
+            Check("empty lunch means no lunch break", AvailabilityText.Rules("08:30", "17:00", "mon", 0, "", "").LunchStart.HasValue, false);
+
+            DateTime thu = new DateTime(2026, 11, 5);
+            AvailabilityRules olle = AvailabilityText.Rules("08:30", "17:00", "mon,tue,wed,thu,fri", 0, "12:00", "13:00");
+            Check("Olle's day: from 08:30, never over lunch",
+                Ranges(AvailabilityText.FreeRanges(new List<TimeRange>(), olle, thu, thu, thu, TimeSpan.FromMinutes(30))),
+                "08:30-12:00 13:00-17:00");
+            AvailabilityRules olleBuffer = AvailabilityText.Rules("08:30", "17:00", "mon,tue,wed,thu,fri", 15, "12:00", "13:00");
+            Check("the buffer is not added around lunch",
+                Ranges(AvailabilityText.FreeRanges(new List<TimeRange>(), olleBuffer, thu, thu, thu, TimeSpan.FromMinutes(30))),
+                "08:30-12:00 13:00-17:00");
             Check("unreadable settings fall back to 08-17 Mon-Fri",
                 fallback.WorkStart + " " + fallback.WorkEnd + " " + AvailabilityText.DaysText(fallback.WorkDays) + " " + fallback.Buffer.TotalMinutes,
                 "08:00:00 17:00:00 mon,tue,wed,thu,fri 15");
@@ -357,6 +372,34 @@ namespace ProdigoOutlook.LogicTests
             Check("Swedish email", AvailabilityText.DetectLanguage("Hej Olle! Tack för senast, kan vi ses och prata om det?"), AvailabilityLanguage.Swedish);
             Check("English email", AvailabilityText.DetectLanguage("Hi Olle, thanks for the call. Would you have time to meet and go through the plan?"), AvailabilityLanguage.English);
             Check("too little text: undecided", AvailabilityText.DetectLanguage("OK"), (AvailabilityLanguage?)null);
+
+            // A reply as it really looks in Olle's English Outlook: English header lines
+            // above the quoted Swedish email, and an English disclaimer below it.
+            const string swedishReply =
+                "\r\n\r\nMvh\r\nOlle Gemfors | Group Strategy Manager | HiQ\r\n\r\n" +
+                "From: Anna Svensson <anna.svensson@example.se>\r\n" +
+                "Sent: Monday, November 9, 2026 4:12 PM\r\n" +
+                "To: Olle Gemfors <olle.gemfors@hiq.se>\r\n" +
+                "Cc: Per Nilsson <per.nilsson@example.se>\r\n" +
+                "Subject: RE: Möte om strategin\r\n\r\n" +
+                "Hej Olle!\r\n\r\nVi skulle vilja boka in ett möte för att gå igenom planen inför nästa år. " +
+                "När passar det för dig?\r\n\r\nVänliga hälsningar\r\nAnna\r\n\r\n" +
+                "This e-mail and any attachments are confidential and may be legally privileged. If you are not " +
+                "the intended recipient, please notify the sender immediately and delete it from your system. " +
+                "Any use of the information in this e-mail by anyone other than the intended recipient is " +
+                "prohibited, and we do not accept any liability for the contents of this message or for any " +
+                "changes made to it after it was sent. Please consider the environment before printing.";
+            int svCount, enCount;
+            AvailabilityLanguage? detected = AvailabilityText.DetectLanguage(swedishReply, out svCount, out enCount);
+            Check("Swedish reply with English headers and disclaimer", detected, AvailabilityLanguage.Swedish);
+            if (detected != AvailabilityLanguage.Swedish)
+                Console.WriteLine("        sv=" + svCount + " en=" + enCount + " sample: " + AvailabilityText.LanguageSample(swedishReply));
+
+            const string englishReply =
+                "\r\n\r\nMvh\r\nOlle\r\n\r\nFrom: John Smith <john@example.com>\r\nSent: Monday\r\nTo: Olle\r\n" +
+                "Subject: Strategy meeting\r\n\r\nHi Olle, would you have time next week to go through the plan " +
+                "with me and the team? Thanks, John";
+            Check("English reply with Olle's Swedish sign-off", AvailabilityText.DetectLanguage(englishReply), AvailabilityLanguage.English);
         }
 
         private static string Ranges(IEnumerable<TimeRange> ranges) =>

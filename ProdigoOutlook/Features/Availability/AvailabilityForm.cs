@@ -125,7 +125,8 @@ namespace ProdigoOutlook.Features.Availability
             AvailabilityText.PeriodDays(period, _now, out first, out last);
             List<TimeRange> free = AvailabilityText.FreeRanges(_busy, _rules, first, last, _now, TimeSpan.FromMinutes(length));
             List<TimeRange> picked = AvailabilityText.Pick(free);
-            string text = AvailabilityText.Format(picked, format, language, Opening(format, language));
+            string opening = Opening(format, language);
+            string text = AvailabilityText.Format(picked, format, language, opening);
 
             if (text == null)
             {
@@ -139,6 +140,8 @@ namespace ProdigoOutlook.Features.Availability
             _current = new AvailabilityChoice
             {
                 Text = text,
+                TextWithoutBullets = AvailabilityText.Format(picked, format, language, opening, string.Empty),
+                HasOpening = !string.IsNullOrWhiteSpace(opening),
                 RangeCount = picked.Count,
                 LengthMinutes = length,
                 Period = period,

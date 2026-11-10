@@ -92,18 +92,49 @@ namespace ProdigoOutlook.Features.Availability
             return item != null && wordEditor != null;
         }
 
-        public static string BodyText(object item)
+        /// <summary>
+        /// The email's text as it is on screen, read from its editor - the item's Body
+        /// can lag behind while the email is being written. Falls back to Body.
+        /// </summary>
+        public static string BodyText(object item, object wordEditor)
         {
+            dynamic content = null;
+            try
+            {
+                dynamic doc = wordEditor;
+                content = doc.Content;
+                string text = content.Text as string;
+                if (!string.IsNullOrWhiteSpace(text)) return text;
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Insert availability: could not read the email's text from its editor", ex);
+            }
+            finally
+            {
+                if (content != null && Marshal.IsComObject((object)content)) Marshal.ReleaseComObject((object)content);
+            }
             try { return (item as Outlook.MailItem)?.Body ?? string.Empty; }
             catch { return string.Empty; }
         }
 
+        /// <summary>True for a plain-text email, where real bullets are not possible.</summary>
+        public static bool IsPlainText(object item)
+        {
+            try { return (item as Outlook.MailItem)?.BodyFormat == Outlook.OlBodyFormat.olFormatPlain; }
+            catch { return false; }
+        }
+
         /// <summary>
         /// Inserts the text at the cursor, replacing any selected text, and leaves the
-        /// cursor after it. "\n" becomes a new paragraph. Goes through Word's own
-        /// editor, late-bound so no Word reference is needed.
+        /// cursor after it. "\n" becomes a new paragraph. From line
+        /// <paramref name="firstBulletLine"/> on (0-based), the paragraphs get real Word
+        /// bullets, as with Outlook's own Bullets button; -1 means none. If the bullets
+        /// cannot be applied, those lines get a "• " instead, so the list never comes
+        /// out bare. Goes through Word's own editor, late-bound so no Word reference is
+        /// needed.
         /// </summary>
-        public static void Insert(object wordEditor, string text)
+        public static void Insert(object wordEditor, string text, int firstBulletLine)
         {
             dynamic doc = wordEditor;
             dynamic windows = null, window = null, selection = null, range = null;
@@ -115,6 +146,21 @@ namespace ProdigoOutlook.Features.Availability
                 range = selection.Range;
                 range.Text = text.Replace("\r\n", "\n").Replace('\n', '\r');
                 int end = range.End;
+
+                if (firstBulletLine >= 0)
+                {
+                    try
+                    {
+                        ApplyBullets(doc, range, firstBulletLine);
+                    }
+                    catch (Exception ex)
+                    {
+                        Log.Warn("Insert availability: real bullets could not be applied; using a bullet character", ex);
+                        PrefixBullets(range, firstBulletLine);
+                    }
+                    end = range.End;
+                }
+
                 selection.SetRange(end, end);
             }
             finally
@@ -122,6 +168,29 @@ namespace ProdigoOutlook.Features.Availability
                 foreach (object o in new object[] { range, selection, window, windows })
                     if (o != null && Marshal.IsComObject(o)) Marshal.ReleaseComObject(o);
             }
+        }
+
+        private const int WdBulletGallery = 1;
+        private const int WdListApplyToWholeList = 0;
+
+        private static void ApplyBullets(dynamic doc, dynamic range, int firstBulletLine)
+        {
+            dynamic paragraphs = range.Paragraphs;
+            dynamic first = paragraphs[firstBulletLine + 1];
+            dynamic listRange = doc.Range(first.Range.Start, range.End);
+            dynamic galleries = doc.Application.ListGalleries;
+            dynamic template = galleries[WdBulletGallery].ListTemplates[1];
+            // ApplyListTemplate rather than ApplyBulletDefault: the latter toggles, so it
+            // would remove bullets if the cursor was already in a bulleted list.
+            listRange.ListFormat.ApplyListTemplate(template, false, WdListApplyToWholeList);
+        }
+
+        private static void PrefixBullets(dynamic range, int firstBulletLine)
+        {
+            dynamic paragraphs = range.Paragraphs;
+            int count = paragraphs.Count;
+            for (int i = firstBulletLine + 1; i <= count; i++)
+                paragraphs[i].Range.InsertBefore("• ");
         }
     }
 }

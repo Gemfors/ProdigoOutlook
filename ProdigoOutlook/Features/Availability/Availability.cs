@@ -30,18 +30,29 @@ namespace ProdigoOutlook.Features.Availability
 
             OutlookSettings settings = OutlookSettings.Current;
             AvailabilityRules rules = AvailabilityText.Rules(settings.AvailabilityWorkStart, settings.AvailabilityWorkEnd,
-                settings.AvailabilityWorkDays, settings.AvailabilityBuffer);
+                settings.AvailabilityWorkDays, settings.AvailabilityBuffer,
+                settings.AvailabilityLunchStart, settings.AvailabilityLunchEnd);
 
             DateTime now = DateTime.Now;
             List<TimeRange> busy = AvailabilityCalendar.Busy(now.Date, now.Date.AddDays(15));
 
-            AvailabilityLanguage language = AvailabilityText.DetectLanguage(AvailabilityCalendar.BodyText(item))
+            int sv, en;
+            AvailabilityLanguage? detected = AvailabilityText.DetectLanguage(AvailabilityCalendar.BodyText(item, editor), out sv, out en);
+            AvailabilityLanguage language = detected
                 ?? (settings.AvailabilityLastLanguage == "en" ? AvailabilityLanguage.English : AvailabilityLanguage.Swedish);
+            Log.Info("Insert availability: language " + (detected.HasValue ? "detected " + detected.Value : "undecided, using last choice " + language) +
+                     " (Swedish words " + sv + ", English words " + en + ")");
 
             AvailabilityChoice choice = AvailabilityForm.Ask(Ol.OwnerWindow(window), busy, rules, now, language, settings);
             if (choice == null) return;
 
-            AvailabilityCalendar.Insert(editor, choice.Text);
+            // A formatted email gets real bullets; a plain-text one keeps the "• " lines
+            // the preview showed.
+            bool realBullets = choice.Format == AvailabilityFormat.List && !AvailabilityCalendar.IsPlainText(item);
+            if (realBullets)
+                AvailabilityCalendar.Insert(editor, choice.TextWithoutBullets, choice.HasOpening ? 1 : 0);
+            else
+                AvailabilityCalendar.Insert(editor, choice.Text, -1);
             Log.Info("Insert availability: inserted " + choice.RangeCount + " time range(s)");
 
             OutlookSettings updated = settings.Copy();
@@ -61,7 +72,11 @@ namespace ProdigoOutlook.Features.Availability
 
     internal sealed class AvailabilityChoice
     {
+        /// <summary>As previewed: list lines start with "• ".</summary>
         public string Text { get; set; }
+        /// <summary>The same with no bullet characters, for real Word bullets.</summary>
+        public string TextWithoutBullets { get; set; }
+        public bool HasOpening { get; set; }
         public int RangeCount { get; set; }
         public int LengthMinutes { get; set; }
         public AvailabilityPeriod Period { get; set; }
