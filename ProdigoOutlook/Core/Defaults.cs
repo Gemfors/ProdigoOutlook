@@ -24,5 +24,16 @@ namespace ProdigoOutlook.Core
 
         /// <summary>Warn when a delayed meeting includes a meeting room.</summary>
         public const bool SendLaterRoomWarning = true;
+
+        // Insert availability (phase 3), agreed with Olle on 10 November 2026.
+        public const string AvailabilityWorkStart = "08:00";
+        public const string AvailabilityWorkEnd = "17:00";
+        public const string AvailabilityWorkDays = "mon,tue,wed,thu,fri";
+        /// <summary>Minutes kept clear before and after each meeting.</summary>
+        public const int AvailabilityBuffer = 0;
+        public const string AvailabilityOpeningListEn = "I'm available at the following times:";
+        public const string AvailabilityOpeningListSv = "Jag är ledig följande tider:";
+        public const string AvailabilityOpeningSentenceEn = "I'm free";
+        public const string AvailabilityOpeningSentenceSv = "Jag kan";
     }
 }

@@ -150,6 +150,11 @@
     <Compile Include="Features\SendLater\SendLaterTime.cs" />
     <Compile Include="Features\PreSendChecks\PreSendChecks.cs" />
     <Compile Include="Features\Availability\Availability.cs" />
+    <Compile Include="Features\Availability\AvailabilityCalendar.cs" />
+    <Compile Include="Features\Availability\AvailabilityForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Features\Availability\AvailabilityText.cs" />
     <Compile Include="Features\EmailToTodo\EmailToTodo.cs" />
     <Compile Include="Features\FollowUp\FollowUp.cs" />
     <Compile Include="Features\MeetingPresets\MeetingPresets.cs" />

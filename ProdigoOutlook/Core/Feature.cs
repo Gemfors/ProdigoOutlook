@@ -29,7 +29,7 @@ namespace ProdigoOutlook.Core
         {
             new FeatureInfo(SendLater,      1, true,  "Send later", "Schedule emails and meeting invites, and edit or reschedule them before they go"),
             new FeatureInfo(PreSendChecks,  2, false, "Pre-send checks", "Warn about a missing attachment, empty subject, large reply-all and similar before sending"),
-            new FeatureInfo(Availability,   3, false, "Insert availability", "Insert your free times from the calendar as text"),
+            new FeatureInfo(Availability,   3, true,  "Insert availability", "Insert your free times from the calendar as text"),
             new FeatureInfo(EmailToTodo,    4, false, "Email to todo", "Create a task in Todo Kanban from an email"),
             new FeatureInfo(FollowUp,       5, false, "Follow-up tracker", "Remind you when a sent email gets no reply"),
             new FeatureInfo(MeetingPresets, 6, false, "Meeting presets", "New meeting with preset length, agenda and attendees"),

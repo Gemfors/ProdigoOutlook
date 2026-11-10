@@ -12,6 +12,9 @@
 				<group id="grpSend" label="Send" getVisible="GetVisible" tag="sendlater">
 					<button id="btnScheduled" label="Scheduled" size="large" imageMso="DelayDeliveryOutlook" keytip="SC" screentip="Scheduled Sends" supertip="Everything waiting in the Outbox to be sent later. Change the time, send now, or cancel." onAction="OnScheduled" getVisible="GetVisible" tag="sendlater" />
 				</group>
+				<group id="grpInsert" label="Insert" getVisible="GetVisible" tag="availability">
+					<button id="btnAvailability" label="Availability" size="large" imageMso="CalendarInsert" keytip="AV" screentip="Insert Availability" supertip="In a reply you are writing in the reading pane: insert your free times from your calendar at the cursor." onAction="OnAvailability" getVisible="GetVisible" tag="availability" />
+				</group>
 				<group id="grpMail" label="Mail" getVisible="GetVisible" tag="todo,fileemail,conveniences">
 					<button id="btnTodo" label="To Todo" size="large" imageMso="NewTask" keytip="TD" screentip="Email to Todo" supertip="Create a task in Todo Kanban from the selected email (phase 4)." onAction="OnPlanned" getVisible="GetVisible" tag="todo" />
 					<button id="btnFileEmail" label="File Email" size="large" imageMso="FileSaveAs" keytip="FE" screentip="File Email" supertip="Save the selected email and its attachments to a project folder (phase 7)." onAction="OnPlanned" getVisible="GetVisible" tag="fileemail" />

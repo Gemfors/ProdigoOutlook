@@ -69,9 +69,9 @@ error goes to the log.
 
 | Phase | Feature | Status | Where |
 |---|---|---|---|
-| 1 | **Send later**: emails and meeting invites, editable and reschedulable, Scheduled list, room warning, Outbox protection | ✅ Built (untested in Outlook) | Compose, Appointment, Main window |
+| 1 | **Send later**: emails and meeting invites, editable and reschedulable, Scheduled list, room warning, Outbox protection | ✅ Built and tested in Olle's mailbox, 4–5 Nov 2026 | Compose, Appointment, Main window |
 | 2 | Pre-send checks: missing attachment, empty subject, big reply-all, internal and external recipients mixed, wrong account, weekday/date mismatch. Rules in a JSON file | Planned | On send |
-| 3 | Insert availability as text ("Jag kan tis 10–12, ons efter 14…") | Planned | Compose |
+| 3 | **Insert availability**: your free times from the calendar, as a list or a sentence, Swedish or English | ✅ Built (untested in Outlook) | Compose, Main window (reading-pane replies) |
 | 4 | Email to Todo Kanban | Planned; integration point to be decided | Main window, Read |
 | 5 | Follow-up tracker: "remind me if no reply in X days" | Planned | Compose, Main window |
 | 6 | Meeting presets: length, agenda, attendees from an email, Teams | Planned | Main window, Read, Appointment |
@@ -182,6 +182,36 @@ watches for this:
 
 ---
 
+## Insert availability
+
+In an email you're writing, click where the times should go and press
+**Prodigo → Availability** (Alt, Z, P, A, V). This works in a reply in the reading
+pane too, from the main window's Prodigo tab. Choose:
+
+- **Meeting length:** 30 min, 45 min, 1 h, 1.5 h or 2 h.
+- **Period:** this week, next week, or the next 2 weeks.
+- **List or sentence.**
+- **Svenska or English.** The language is picked from the email's text, or from your
+  last choice if there's too little text to tell.
+
+The preview shows exactly what will be inserted. **Insert** puts it at the cursor.
+The window remembers your choices.
+
+What counts as free:
+- Within your working hours on your working days: 08:00–17:00, Monday to Friday,
+  unless you change them in Settings.
+- Outside anything in your own calendar that isn't marked **Free**. Busy, Tentative,
+  Out of office and Working elsewhere all count as busy.
+- Only gaps the meeting fits in, starting no earlier than the next half hour from now.
+- Times are rounded inwards to half hours.
+- An optional buffer before and after meetings, set in Settings. The default is none.
+
+At most 5 time ranges are offered, spread over the days rather than all on the first
+one. It only reads your calendar: it never changes the calendar, and never sends
+anything.
+
+---
+
 ## Keytips and AutoHotkey
 
 The Prodigo tab's keytip is **ZP** in every window. Each feature keeps the same
@@ -192,7 +222,7 @@ keytip everywhere.
 | Alt, Z, P, S, L | Send Later | Compose, Appointment | Built |
 | Alt, Z, P, S, C | Scheduled Sends | Main window | Built |
 | Alt, Z, P, S, T | Prodigo Settings | All | Built |
-| Alt, Z, P, A, V | Insert Availability | Compose | Phase 3 |
+| Alt, Z, P, A, V | Insert Availability | Compose, Main window | Built |
 | Alt, Z, P, T, D | Email to Todo | Main window, Read | Phase 4 |
 | Alt, Z, P, F, U | Follow-ups / Remind If No Reply | Main window / Compose | Phase 5 |
 | Alt, Z, P, M, P | Meeting Preset | Main window, Read, Appointment | Phase 6 |
@@ -250,7 +280,7 @@ Settings*. Case and spaces don't matter.
 
 | What | Where |
 |---|---|
-| Settings (feature switches, presets, room warning) | `%APPDATA%\Prodigo\outlook-settings.txt`, plain `key = value` |
+| Settings (feature switches, presets, room warning, availability hours, buffer and opening lines) | `%APPDATA%\Prodigo\outlook-settings.txt`, plain `key = value` |
 | Log, one file per day, 14 days kept | `%LOCALAPPDATA%\Prodigo\Logs\outlook-yyyy-MM-dd.log` |
 | Phase 2 rules (future) | `%APPDATA%\Prodigo\outlook-rules.json` |
 
@@ -356,7 +386,28 @@ every invite that was replaced.
 - [ ] With Send later on, ordinary emails and meetings without a delay go out
   exactly as before. The log has no errors for them.
 
-### Phases 2–8
+### Phase 3: Insert availability
+
+- [ ] New email: click in the body, press Availability. The preview matches your
+  calendar for this week. Insert puts it at the cursor, as a list.
+- [ ] Reply in the reading pane, not popped out: the main window's Availability
+  button inserts into the reply.
+- [ ] With no email being written (for example, just reading one): a message asks you
+  to click in an email you're writing. Nothing else happens.
+- [ ] Switch to Sentence and English: the preview changes straight away. Close the
+  window, reopen it, and check it remembers your choices.
+- [ ] Reply to a Swedish email: the window opens in Swedish. Reply to an English one:
+  English.
+- [ ] A meeting marked **Free** doesn't block time. One marked **Tentative** does.
+- [ ] Recurring meetings block time on every day they occur.
+- [ ] A 2 h meeting in a busy week: only gaps of 2 h or more are offered, or the
+  "No free time" message appears and Insert is greyed out.
+- [ ] Settings: change the working hours to 09:00–16:00 and set a 15-minute buffer.
+  The offered times change to match.
+- [ ] Settings: switch Insert availability off. The button disappears from both
+  windows.
+
+### Phases 2 and 4–8
 
 These get written when each phase is built. At minimum, each will cover: the
 feature's happy path, the switch in Settings, its keytip and bridge name, and (for

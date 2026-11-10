@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using ProdigoOutlook.Core;
 using ProdigoOutlook.Features.SendLater;
+using ProdigoOutlook.Features.Availability;
+using System.Linq;
 
 namespace ProdigoOutlook.LogicTests
 {
@@ -23,6 +25,7 @@ namespace ProdigoOutlook.LogicTests
             MeetingDecisions();
             Cleanup();
             Stored();
+            Availability();
 
             Console.WriteLine();
             Console.WriteLine(_failures == 0 ? "All checks passed." : _failures + " check(s) FAILED.");
@@ -258,6 +261,106 @@ namespace ProdigoOutlook.LogicTests
             Check("garbage reads as null", TimeHelpers.FromStored("tomorrow"), (DateTime?)null);
             Check("4501 is no date", TimeHelpers.IsNoDate(TimeHelpers.OutlookNoDate), true);
         }
+
+        private static void Availability()
+        {
+            Section("Availability: period");
+            DateTime first, last;
+            AvailabilityText.PeriodDays(AvailabilityPeriod.ThisWeek, Wed1000, out first, out last);
+            Check("this week: from today to Sunday", first.ToString("dd") + "-" + last.ToString("dd"), "04-08");
+            AvailabilityText.PeriodDays(AvailabilityPeriod.NextWeek, Wed1000, out first, out last);
+            Check("next week: Monday to Sunday", first.ToString("dd") + "-" + last.ToString("dd"), "09-15");
+            AvailabilityText.PeriodDays(AvailabilityPeriod.NextTwoWeeks, Wed1000, out first, out last);
+            Check("next 2 weeks: today plus 13 days", first.ToString("dd") + "-" + last.ToString("dd"), "04-17");
+
+            Section("Availability: free time");
+            DateTime wed = new DateTime(2026, 11, 4);
+            DateTime now = wed.AddHours(10).AddMinutes(10);
+            var busy = new List<TimeRange>
+            {
+                new TimeRange(wed.AddHours(11), wed.AddHours(12)),
+                new TimeRange(wed.AddHours(13).AddMinutes(15), wed.AddHours(14)),
+            };
+            var rules = new AvailabilityRules();
+            Check("earliest is the next half hour; edges rounded inwards",
+                Ranges(AvailabilityText.FreeRanges(busy, rules, wed, wed, now, TimeSpan.FromMinutes(30))),
+                "10:30-11:00 12:00-13:00 14:00-17:00");
+            Check("gaps too short for the meeting are left out",
+                Ranges(AvailabilityText.FreeRanges(busy, rules, wed, wed, now, TimeSpan.FromMinutes(60))),
+                "12:00-13:00 14:00-17:00");
+            Check("buffer keeps time clear around meetings",
+                Ranges(AvailabilityText.FreeRanges(busy, new AvailabilityRules { Buffer = TimeSpan.FromMinutes(15) }, wed, wed, now, TimeSpan.FromMinutes(30))),
+                "12:30-13:00 14:30-17:00");
+
+            var overlapping = new List<TimeRange>
+            {
+                new TimeRange(wed.AddHours(9), wed.AddHours(12)),
+                new TimeRange(wed.AddHours(10), wed.AddHours(11)),
+                new TimeRange(wed.AddHours(16).AddMinutes(45), wed.AddHours(18)),
+            };
+            Check("overlapping meetings, and one running past the end of the day",
+                Ranges(AvailabilityText.FreeRanges(overlapping, rules, wed, wed, wed.AddHours(7), TimeSpan.FromMinutes(30))),
+                "08:00-09:00 12:00-16:30");
+
+            Check("after working hours today, nothing today",
+                AvailabilityText.FreeRanges(busy, rules, wed, wed, wed.AddHours(17).AddMinutes(5), TimeSpan.FromMinutes(30)).Count, 0);
+
+            DateTime sat = new DateTime(2026, 11, 7);
+            Check("weekend skipped",
+                AvailabilityText.FreeRanges(new List<TimeRange>(), rules, sat, sat.AddDays(1), wed, TimeSpan.FromMinutes(30)).Count, 0);
+
+            var allDay = new List<TimeRange> { new TimeRange(wed.AddDays(1), wed.AddDays(2)) };
+            Check("an all-day busy event blocks the day",
+                AvailabilityText.FreeRanges(allDay, rules, wed.AddDays(1), wed.AddDays(1), wed, TimeSpan.FromMinutes(30)).Count, 0);
+
+            Section("Availability: picking and text");
+            var many = new List<TimeRange>
+            {
+                new TimeRange(wed.AddHours(8), wed.AddHours(9)),
+                new TimeRange(wed.AddHours(10), wed.AddHours(11)),
+                new TimeRange(wed.AddHours(13), wed.AddHours(14)),
+                new TimeRange(wed.AddHours(15), wed.AddHours(16)),
+                new TimeRange(wed.AddDays(1).AddHours(9), wed.AddDays(1).AddHours(10)),
+                new TimeRange(wed.AddDays(2).AddHours(9), wed.AddDays(2).AddHours(10)),
+                new TimeRange(wed.AddDays(2).AddHours(14), wed.AddDays(2).AddHours(15)),
+            };
+            List<TimeRange> picked = AvailabilityText.Pick(many);
+            Check("at most 5, spread over the days, in time order",
+                string.Join(" ", picked.Select(r => r.Start.ToString("ddd HH", System.Globalization.CultureInfo.InvariantCulture))),
+                "Wed 08 Wed 10 Thu 09 Fri 09 Fri 14");
+
+            var two = new List<TimeRange>
+            {
+                new TimeRange(new DateTime(2026, 11, 10, 10, 0, 0), new DateTime(2026, 11, 10, 12, 0, 0)),
+                new TimeRange(new DateTime(2026, 11, 11, 14, 0, 0), new DateTime(2026, 11, 11, 17, 0, 0)),
+            };
+            Check("English list",
+                AvailabilityText.Format(two, AvailabilityFormat.List, AvailabilityLanguage.English, "I'm available at the following times:"),
+                "I'm available at the following times:\n- Tue 10 Nov, 10:00–12:00\n- Wed 11 Nov, 14:00–17:00");
+            Check("Swedish sentence",
+                AvailabilityText.Format(two, AvailabilityFormat.Sentence, AvailabilityLanguage.Swedish, "Jag kan"),
+                "Jag kan tis 10 nov 10:00–12:00 eller ons 11 nov 14:00–17:00.");
+            Check("nothing free gives no text",
+                AvailabilityText.Format(new List<TimeRange>(), AvailabilityFormat.List, AvailabilityLanguage.English, "x"), null);
+
+            Section("Availability: settings text");
+            Check("time 8.30", AvailabilityText.ParseTime("8.30"), (TimeSpan?)new TimeSpan(8, 30, 0));
+            Check("time nonsense", AvailabilityText.ParseTime("eight"), (TimeSpan?)null);
+            Check("days in Swedish", AvailabilityText.DaysText(AvailabilityText.ParseDays("mån, tis, onsdag")), "mon,tue,wed");
+            Check("bad day refused", AvailabilityText.ParseDays("mon,funday"), (HashSet<DayOfWeek>)null);
+            AvailabilityRules fallback = AvailabilityText.Rules("17:00", "08:00", "nonsense", 15);
+            Check("unreadable settings fall back to 08-17 Mon-Fri",
+                fallback.WorkStart + " " + fallback.WorkEnd + " " + AvailabilityText.DaysText(fallback.WorkDays) + " " + fallback.Buffer.TotalMinutes,
+                "08:00:00 17:00:00 mon,tue,wed,thu,fri 15");
+
+            Section("Availability: language");
+            Check("Swedish email", AvailabilityText.DetectLanguage("Hej Olle! Tack för senast, kan vi ses och prata om det?"), AvailabilityLanguage.Swedish);
+            Check("English email", AvailabilityText.DetectLanguage("Hi Olle, thanks for the call. Would you have time to meet and go through the plan?"), AvailabilityLanguage.English);
+            Check("too little text: undecided", AvailabilityText.DetectLanguage("OK"), (AvailabilityLanguage?)null);
+        }
+
+        private static string Ranges(IEnumerable<TimeRange> ranges) =>
+            string.Join(" ", ranges.Select(r => r.Start.ToString("HH:mm") + "-" + r.End.ToString("HH:mm")));
 
         private static CleanupBatch removedOnlyFor(string gen)
         {

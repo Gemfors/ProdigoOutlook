@@ -117,6 +117,14 @@ namespace ProdigoOutlook
             Ol.Run(Feature.SendLater, "Scheduled Sends", () => ScheduledForm.Open(control));
 
         // -------------------------------------------------------------------
+        // Insert availability (phase 3)
+        // -------------------------------------------------------------------
+
+        [ForFeature(Feature.Availability)]
+        public void OnAvailability(Office.IRibbonControl control) =>
+            Ol.Run(Feature.Availability, "Insert Availability", () => Features.Availability.Availability.Insert(control));
+
+        // -------------------------------------------------------------------
         // Prodigo
         // -------------------------------------------------------------------
 

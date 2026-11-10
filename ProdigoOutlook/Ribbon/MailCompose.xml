@@ -9,7 +9,7 @@
 					<button id="btnRemindNoReply" label="Remind If No Reply" size="large" imageMso="FlagToday" keytip="FU" screentip="Remind If No Reply" supertip="Remind me if nobody replies within a number of days (phase 5)." onAction="OnPlanned" getVisible="GetVisible" tag="followup" />
 				</group>
 				<group id="grpInsert" label="Insert" getVisible="GetVisible" tag="availability">
-					<button id="btnAvailability" label="Availability" size="large" imageMso="CalendarInsert" keytip="AV" screentip="Insert Availability" supertip="Insert your free times from your calendar as text at the cursor (phase 3)." onAction="OnPlanned" getVisible="GetVisible" tag="availability" />
+					<button id="btnAvailability" label="Availability" size="large" imageMso="CalendarInsert" keytip="AV" screentip="Insert Availability" supertip="Insert your free times from your calendar as text at the cursor, as a list or a sentence, in Swedish or English." onAction="OnAvailability" getVisible="GetVisible" tag="availability" />
 				</group>
 				<group id="grpTools" label="Tools" getVisible="GetVisible" tag="conveniences">
 					<button id="btnCopyRecipients" label="Copy Recipients" imageMso="Copy" keytip="CR" screentip="Copy Recipients" supertip="Copy the recipients of this email to the clipboard (phase 8)." onAction="OnPlanned" getVisible="GetVisible" tag="conveniences" />

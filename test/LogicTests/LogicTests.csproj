@@ -19,6 +19,7 @@
   <ItemGroup>
     <Compile Include="..\..\ProdigoOutlook\Core\TimeHelpers.cs" Link="Linked\TimeHelpers.cs" />
     <Compile Include="..\..\ProdigoOutlook\Features\SendLater\SendLaterTime.cs" Link="Linked\SendLaterTime.cs" />
+    <Compile Include="..\..\ProdigoOutlook\Features\Availability\AvailabilityText.cs" Link="Linked\AvailabilityText.cs" />
   </ItemGroup>
 
   <ItemGroup>

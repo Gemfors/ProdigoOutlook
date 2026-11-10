@@ -27,6 +27,8 @@ namespace ProdigoOutlook.Core
     ///   feature.&lt;id&gt;          = on | off      (see Features)
     ///   sendlater.preset       = tomorrow 08:00 (repeated, one per preset, in order)
     ///   sendlater.roomwarning  = on | off
+    ///   availability.*         = working hours and days, buffer, opening lines, and
+    ///                            the last choices in the window (see AvailabilityKeys)
     /// The first sendlater.preset line replaces the default list rather than adding to
     /// it, so a file without any means the defaults.
     /// </summary>
@@ -46,6 +48,38 @@ namespace ProdigoOutlook.Core
         public List<string> SendLaterPresets { get; set; } = new List<string>(Defaults.SendLaterPresets);
 
         public bool SendLaterRoomWarning { get; set; } = Defaults.SendLaterRoomWarning;
+
+        // Insert availability. Times as HH:mm, days as "mon,tue,...", buffer in minutes.
+        public string AvailabilityWorkStart { get; set; } = Defaults.AvailabilityWorkStart;
+        public string AvailabilityWorkEnd { get; set; } = Defaults.AvailabilityWorkEnd;
+        public string AvailabilityWorkDays { get; set; } = Defaults.AvailabilityWorkDays;
+        public int AvailabilityBuffer { get; set; } = Defaults.AvailabilityBuffer;
+        public string AvailabilityOpeningListEn { get; set; } = Defaults.AvailabilityOpeningListEn;
+        public string AvailabilityOpeningListSv { get; set; } = Defaults.AvailabilityOpeningListSv;
+        public string AvailabilityOpeningSentenceEn { get; set; } = Defaults.AvailabilityOpeningSentenceEn;
+        public string AvailabilityOpeningSentenceSv { get; set; } = Defaults.AvailabilityOpeningSentenceSv;
+
+        // The last choices in the Insert availability window, remembered between uses.
+        public int AvailabilityLastLength { get; set; } = 60;
+        public string AvailabilityLastPeriod { get; set; } = "thisweek";
+        public string AvailabilityLastFormat { get; set; } = "list";
+        public string AvailabilityLastLanguage { get; set; } = "sv";
+
+        private static readonly (string Key, Func<OutlookSettings, string> Get, Action<OutlookSettings, string> Set)[] AvailabilityKeys =
+        {
+            ("availability.workstart", s => s.AvailabilityWorkStart, (s, v) => s.AvailabilityWorkStart = v),
+            ("availability.workend", s => s.AvailabilityWorkEnd, (s, v) => s.AvailabilityWorkEnd = v),
+            ("availability.workdays", s => s.AvailabilityWorkDays, (s, v) => s.AvailabilityWorkDays = v),
+            ("availability.buffer", s => s.AvailabilityBuffer.ToString(), (s, v) => { int n; if (int.TryParse(v, out n) && n >= 0 && n <= 240) s.AvailabilityBuffer = n; }),
+            ("availability.opening.list.en", s => s.AvailabilityOpeningListEn, (s, v) => s.AvailabilityOpeningListEn = v),
+            ("availability.opening.list.sv", s => s.AvailabilityOpeningListSv, (s, v) => s.AvailabilityOpeningListSv = v),
+            ("availability.opening.sentence.en", s => s.AvailabilityOpeningSentenceEn, (s, v) => s.AvailabilityOpeningSentenceEn = v),
+            ("availability.opening.sentence.sv", s => s.AvailabilityOpeningSentenceSv, (s, v) => s.AvailabilityOpeningSentenceSv = v),
+            ("availability.last.length", s => s.AvailabilityLastLength.ToString(), (s, v) => { int n; if (int.TryParse(v, out n) && n > 0) s.AvailabilityLastLength = n; }),
+            ("availability.last.period", s => s.AvailabilityLastPeriod, (s, v) => s.AvailabilityLastPeriod = v),
+            ("availability.last.format", s => s.AvailabilityLastFormat, (s, v) => s.AvailabilityLastFormat = v),
+            ("availability.last.language", s => s.AvailabilityLastLanguage, (s, v) => s.AvailabilityLastLanguage = v),
+        };
 
         /// <summary>Built features are on unless the file says otherwise.</summary>
         public bool IsFeatureOn(string id)
@@ -82,6 +116,8 @@ namespace ProdigoOutlook.Core
                 foreach (string preset in SendLaterPresets)
                     sb.AppendLine("sendlater.preset = " + preset);
                 sb.AppendLine("sendlater.roomwarning = " + (SendLaterRoomWarning ? "on" : "off"));
+                foreach (var k in AvailabilityKeys)
+                    sb.AppendLine(k.Key + " = " + (k.Get(this) ?? string.Empty));
 
                 string tmp = FilePath + ".tmp";
                 File.WriteAllText(tmp, sb.ToString(), Encoding.UTF8);
@@ -129,6 +165,11 @@ namespace ProdigoOutlook.Core
                     else if (key == "sendlater.roomwarning")
                     {
                         s.SendLaterRoomWarning = IsOn(value);
+                    }
+                    else
+                    {
+                        foreach (var k in AvailabilityKeys)
+                            if (k.Key == key) k.Set(s, value);
                     }
                 }
 

@@ -2,8 +2,9 @@
 
 VSTO Outlook (classic) add-in. C#, .NET Framework 4.8, C# 7.3, assembly name
 `ProdigoOutlook`. Third member of the family: `..\Prodigo` (PowerPoint, VSTO) and
-`..\ProdigoExcel` (Excel-DNA). Started 4 November 2026. Phase 1 (Send later) is built;
-phases 2–8 are stubbed. See README for the roadmap.
+`..\ProdigoExcel` (Excel-DNA). Started 4 November 2026. Phase 1 (Send later) and
+phase 3 (Insert availability) are built; the other phases are stubbed. See README for
+the roadmap.
 
 ## Who Olle is, and what that means
 
@@ -41,7 +42,8 @@ Strategy Manager at HiQ by day.
   certificate (thumbprint `FA385E7C…DE8B9`, in Olle's personal store, expires August
   2027). The `.pfx` copy is git-ignored.
 - **Logic tests:** `dotnet run --project test\LogicTests`. These link
-  `Core\TimeHelpers.cs` and `Features\SendLater\SendLaterTime.cs` directly. Put
+  `Core\TimeHelpers.cs`, `Features\SendLater\SendLaterTime.cs` and
+  `Features\Availability\AvailabilityText.cs` directly. Put
   anything that can be wrong, and doesn't need Outlook, into such files.
 - **Ribbon XML can be checked against the schema** at
   `…\Visual Studio\18\Insiders\Xml\Schemas\1033\customUI14.xsd`. Add it to an
@@ -62,6 +64,7 @@ Strategy Manager at HiQ by day.
 | `Core\` | `Ol` (run wrapper, context item, owner window), `ComScope`, `Log`, `OutlookSettings`, `ItemProps` (hidden named properties), `TimeHelpers`, `Feature` (the roadmap list and on/off), `Defaults`, `FormStyle`, `Later`, `SettingsForm` |
 | `OnSend\` | `IOnSendModule` and `OnSendDispatcher`, the only `ItemSend` handler |
 | `Features\SendLater\` | Phase 1 |
+| `Features\Availability\` | Phase 3: `AvailabilityText` (pure logic), `AvailabilityCalendar` (reads the calendar, inserts via the Word editor), `AvailabilityForm` |
 | `Features\<Name>\` | Stubs for phases 2–8, each with its design notes in the class comment |
 
 ## Rules that hold everywhere
@@ -194,6 +197,25 @@ README's test plan.
   the delivery time. `SendLaterTime.CancellationKind` now also decides by recipient:
   a cancellation to anyone still on the meeting cancels the whole meeting.
   `PlanCleanup` ignores a "whole" cancellation sent in the same press as an update.
+
+## Phase 3: Insert availability
+
+Agreed with Olle on 10 November 2026, before building (the full rules are in the
+`AvailabilityText` class comment and the README):
+- Working hours 08:00–17:00, Monday to Friday, set in Settings.
+- Anything not marked Free counts as busy. Only his own default calendar is read.
+- Earliest time offered is the next half hour; edges are rounded inwards to half hours.
+- The buffer around meetings defaults to 0 and can be set in Settings.
+- At most 5 ranges, spread over the days. A list (default) or a sentence, Swedish or
+  English, with the language detected from the email text.
+- It reads the calendar and inserts text. Nothing else.
+
+Implementation notes:
+- The calendar is read with `Items.Restrict` plus `IncludeRecurrences`, with the dates
+  in the current culture's `"g"` format. This was checked read-only against Olle's real
+  calendar.
+- It works in compose windows and in reading-pane replies (`ActiveInlineResponse`), so
+  the button is on both the compose ribbon and the main-window ribbon.
 
 ## Phase 4: Todo Kanban
 
