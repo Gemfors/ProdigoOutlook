@@ -69,6 +69,16 @@ Strategy Manager at HiQ by day.
 
 ## Rules that hold everywhere
 
+- **Don't read Olle's mail.** This is his rule, set on 10 November 2026. Claude must
+  not read the text of his emails, their attachments, or even their subjects or
+  recipients. The same goes for calendar subjects. The exception is when Olle
+  explicitly allows it for a specific item.
+  - Status checks are fine: whether something was sent or is queued, and its time.
+  - Query only status columns (EntryID, message class, times, `PR_MESSAGE_FLAGS`,
+    Prodigo's Id/Gen/Kind tags), never Subject, To or the body.
+  - Prodigo's log names meeting subjects, so read only the lines you need.
+  - Debug with made-up text.
+
 - **Never open an Outbox item just to look at it.** Opening one through the object
   model (`Items[i]`, `GetItemFromID`, `PropertyAccessor` on it) takes it out of the
   send queue, exactly like double-clicking it.
