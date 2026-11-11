@@ -28,7 +28,7 @@ namespace ProdigoOutlook.Core
         public static readonly IReadOnlyList<FeatureInfo> All = new[]
         {
             new FeatureInfo(SendLater,      1, true,  "Send later", "Schedule emails and meeting invites, and edit or reschedule them before they go"),
-            new FeatureInfo(PreSendChecks,  2, false, "Pre-send checks", "Warn about a missing attachment, empty subject, large reply-all and similar before sending"),
+            new FeatureInfo(PreSendChecks,  2, true,  "Pre-send checks", "Before an email goes: missing attachment, reply to many, inside and outside HiQ mixed, wrong weekday for a date"),
             new FeatureInfo(Availability,   3, true,  "Insert availability", "Insert your free times from the calendar as text"),
             new FeatureInfo(EmailToTodo,    4, false, "Email to todo", "Create a task in Todo Kanban from an email"),
             new FeatureInfo(FollowUp,       5, false, "Follow-up tracker", "Remind you when a sent email gets no reply"),

@@ -55,8 +55,45 @@ namespace ProdigoOutlook.Features.SendLater
             SendLaterChoice choice = SendLaterForm.Ask(owner, mail.Subject, CurrentlyScheduled(mail), null, isMeeting: false);
             if (choice == null) return;
 
+            // What to put back if the send does not happen: Go back in the pre-send
+            // checks, or a failed Send(). Otherwise the email would keep this delay,
+            // and a later ordinary Send would still deliver it late.
+            DateTime? oldUntil = ItemProps.GetTime(mail, Stamp.Until);
+            DateTime oldDeferred = mail.DeferredDeliveryTime;
+            int stoppedBefore = OnSend.OnSendDispatcher.StoppedCount;
+
             ApplyToMail(mail, choice);
-            mail.Send();
+            try
+            {
+                mail.Send();
+            }
+            catch
+            {
+                RestoreMail(mail, oldUntil, oldDeferred);
+                throw;
+            }
+
+            if (OnSend.OnSendDispatcher.StoppedCount != stoppedBefore)
+            {
+                RestoreMail(mail, oldUntil, oldDeferred);
+                Log.Info("Send later: the send was stopped (Go back); the email's earlier timing is restored");
+            }
+        }
+
+        private static void RestoreMail(Outlook.MailItem mail, DateTime? oldUntil, DateTime oldDeferred)
+        {
+            try
+            {
+                ItemProps.SetTime(mail, Stamp.Until, oldUntil);
+                if (TimeHelpers.IsNoDate(oldDeferred) || oldDeferred <= DateTime.Now)
+                    SendLaterOutbox.ClearDeferred(mail);
+                else
+                    SendLaterOutbox.ApplyDeferred(mail, oldDeferred);
+            }
+            catch (Exception ex)
+            {
+                Log.Warn("Send later: could not restore the email's earlier timing", ex);
+            }
         }
 
         /// <summary>Stamps (or unstamps) an email and sets its delivery time. The caller sends it.</summary>

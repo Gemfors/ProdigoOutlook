@@ -2,9 +2,9 @@
 
 VSTO Outlook (classic) add-in. C#, .NET Framework 4.8, C# 7.3, assembly name
 `ProdigoOutlook`. Third member of the family: `..\Prodigo` (PowerPoint, VSTO) and
-`..\ProdigoExcel` (Excel-DNA). Started 4 November 2026. Phase 1 (Send later) and
-phase 3 (Insert availability) are built; the other phases are stubbed. See README for
-the roadmap.
+`..\ProdigoExcel` (Excel-DNA). Started 4 November 2026. Phases 1 (Send later), 2
+(Pre-send checks) and 3 (Insert availability) are built; the other phases are stubbed.
+See README for the roadmap.
 
 ## Who Olle is, and what that means
 
@@ -42,8 +42,9 @@ Strategy Manager at HiQ by day.
   certificate (thumbprint `FA385E7C…DE8B9`, in Olle's personal store, expires August
   2027). The `.pfx` copy is git-ignored.
 - **Logic tests:** `dotnet run --project test\LogicTests`. These link
-  `Core\TimeHelpers.cs`, `Features\SendLater\SendLaterTime.cs` and
-  `Features\Availability\AvailabilityText.cs` directly. Put
+  `Core\TimeHelpers.cs`, `Features\SendLater\SendLaterTime.cs`,
+  `Features\Availability\AvailabilityText.cs` and
+  `Features\PreSendChecks\PreSendRules.cs` directly. Put
   anything that can be wrong, and doesn't need Outlook, into such files.
 - **Ribbon XML can be checked against the schema** at
   `…\Visual Studio\18\Insiders\Xml\Schemas\1033\customUI14.xsd`. Add it to an
@@ -64,6 +65,7 @@ Strategy Manager at HiQ by day.
 | `Core\` | `Ol` (run wrapper, context item, owner window), `ComScope`, `Log`, `OutlookSettings`, `ItemProps` (hidden named properties), `TimeHelpers`, `Feature` (the roadmap list and on/off), `Defaults`, `FormStyle`, `Later`, `SettingsForm` |
 | `OnSend\` | `IOnSendModule` and `OnSendDispatcher`, the only `ItemSend` handler |
 | `Features\SendLater\` | Phase 1 |
+| `Features\PreSendChecks\` | Phase 2: `PreSendRules` (pure checks), `PreSendChecks` (the on-send module: reads the email), `PreSendRulesFile` (`outlook-rules.json`), `PreSendWarningForm` |
 | `Features\Availability\` | Phase 3: `AvailabilityText` (pure logic), `AvailabilityCalendar` (reads the calendar, inserts via the Word editor), `AvailabilityForm` |
 | `Features\<Name>\` | Stubs for phases 2–8, each with its design notes in the class comment |
 
@@ -209,6 +211,36 @@ README's test plan.
   the delivery time. `SendLaterTime.CancellationKind` now also decides by recipient:
   a cancellation to anyone still on the meeting cancels the whole meeting.
   `PlanCleanup` ignores a "whole" cancellation sent in the same press as an update.
+
+## Phase 2: Pre-send checks
+
+Agreed with Olle on 10–11 November 2026 (details in the `PreSendCheck` class comment):
+- **The checks:**
+  - missing attachment, in Swedish and English;
+  - a reply (judged by the subject's RE:/SV: prefix) to more than 10 people;
+  - recipients inside HiQ (hiq.se, hiq.fi, hiq.de, zoolengineering.se) mixed with
+    outside ones;
+  - a weekday that doesn't match its date.
+- **Left out:**
+  - Empty subject: left to Outlook's own prompt.
+  - Account check: he sends from one account.
+  - Meeting invites aren't checked.
+- **The window:** one list of findings, with Go back as the default and Send anyway.
+- **Outlook's own attachment reminder** doesn't understand Swedish, which is why
+  Prodigo took the check over. Olle switches Outlook's off once Prodigo's works.
+
+Implementation notes:
+- Only Olle's own text is checked: `OwnText` cuts at the first quoted header block.
+- Signature and inline images don't count as attachments (hidden, or referenced by
+  `cid:` in the HTML).
+- Exchange recipients are resolved to SMTP addresses.
+- Go back from Prodigo's own Send Later button: `OnSendDispatcher.StoppedCount` tells
+  `SendLaterCommands.ForMail` the send was stopped, and it restores the email's
+  earlier `Until` and deferred time.
+- Prodigo's own resends (Put back, and Scheduled's Change time and Send now for
+  emails) are flagged as resubmits, so they aren't checked twice.
+- The log records the number and kinds of findings, and how long the check took,
+  never the content.
 
 ## Phase 3: Insert availability
 

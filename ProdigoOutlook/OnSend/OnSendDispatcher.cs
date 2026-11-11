@@ -31,6 +31,13 @@ namespace ProdigoOutlook.OnSend
             new SendLaterOnSend(),
         };
 
+        /// <summary>
+        /// How many sends a user's choice has stopped this session. Prodigo's own Send
+        /// Later button compares it before and after calling Send(), to know that Go
+        /// back stopped its send and undo the delay it had already set.
+        /// </summary>
+        public static int StoppedCount { get; private set; }
+
         public static void OnItemSend(object item, ref bool cancel)
         {
             var context = new SendContext();
@@ -67,6 +74,7 @@ namespace ProdigoOutlook.OnSend
             if (context.StopRequested)
             {
                 Log.Info("ItemSend: send stopped by user choice - " + context.StopReason);
+                StoppedCount++;
                 cancel = true;
             }
         }

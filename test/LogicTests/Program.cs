@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using ProdigoOutlook.Core;
 using ProdigoOutlook.Features.SendLater;
 using ProdigoOutlook.Features.Availability;
+using ProdigoOutlook.Features.PreSendChecks;
 using System.Linq;
 
 namespace ProdigoOutlook.LogicTests
@@ -26,6 +27,7 @@ namespace ProdigoOutlook.LogicTests
             Cleanup();
             Stored();
             Availability();
+            PreSend();
 
             Console.WriteLine();
             Console.WriteLine(_failures == 0 ? "All checks passed." : _failures + " check(s) FAILED.");
@@ -400,6 +402,71 @@ namespace ProdigoOutlook.LogicTests
                 "Subject: Strategy meeting\r\n\r\nHi Olle, would you have time next week to go through the plan " +
                 "with me and the team? Thanks, John";
             Check("English reply with Olle's Swedish sign-off", AvailabilityText.DetectLanguage(englishReply), AvailabilityLanguage.English);
+        }
+
+        private static void PreSend()
+        {
+            var rules = new PreSendRules();
+            DateTime today = new DateTime(2026, 11, 11);
+            const string quoted =
+                "\r\n\r\nMvh\r\nOlle\r\n\r\nFrom: Anna Svensson <anna@example.se>\r\nSent: Monday, November 9, 2026 4:12 PM\r\n" +
+                "To: Olle Gemfors <olle.gemfors@hiq.se>\r\nSubject: Avtal\r\n\r\nHej! Jag bifogar avtalet. Ses tisdag 12 nov?";
+
+            Section("Pre-send: own text");
+            Check("text above the quoted email", PreSendCheck.OwnText("Tack!" + quoted).Trim().StartsWith("Tack!") &&
+                                                 !PreSendCheck.OwnText("Tack!" + quoted).Contains("avtalet"), true);
+            Check("Gmail-style quote", PreSendCheck.OwnText("Thanks!\nOn Mon, 9 Nov 2026 at 16:12, Anna <a@x.se> wrote:\n> see attached").Contains("attached"), false);
+            Check("no quote: the whole text", PreSendCheck.OwnText("Hej, se bilaga"), "Hej, se bilaga");
+
+            Section("Pre-send: attachment");
+            Func<string, int, List<PreSendFinding>> run = (body, att) => PreSendCheck.Run(new PreSendInput
+            {
+                Body = body, RealAttachments = att, Recipients = new List<string> { "a@hiq.se" }, Today = today,
+            }, rules);
+            Check("Swedish: bifogar, nothing attached", run("Hej, jag bifogar presentationen.", 0).Count(f => f.Kind == PreSendKind.Attachment), 1);
+            Check("Swedish: se bilaga", run("Se bilaga.", 0).Count(f => f.Kind == PreSendKind.Attachment), 1);
+            Check("English: attached", run("Please find the deck attached.", 0).Count(f => f.Kind == PreSendKind.Attachment), 1);
+            Check("attached and there is an attachment", run("Jag bifogar filen.", 1).Count, 0);
+            Check("only the quoted email mentions it", run("Tack, det ser bra ut!" + quoted, 0).Count(f => f.Kind == PreSendKind.Attachment), 0);
+            Check("the message names the word", run("Jag bifogade den igår.", 0)[0].Message.Contains("\"bifogade\""), true);
+            Check("'bilagd' as a whole word, not 'bilagdes...' style prefixes",
+                PreSendCheck.FirstAttachmentWord("bilagdes", new[] { "bilagd" }), (string)null);
+
+            Section("Pre-send: recipients");
+            Func<List<string>, bool, List<PreSendFinding>> to = (rcpt, reply) => PreSendCheck.Run(new PreSendInput
+            {
+                Body = "Hej", Recipients = rcpt, IsReply = reply, Today = today,
+            }, rules);
+            List<string> eleven = Enumerable.Range(1, 11).Select(i => "p" + i + "@hiq.se").ToList();
+            Check("a reply to 11 people", to(eleven, true).Count(f => f.Kind == PreSendKind.ReplyAll), 1);
+            Check("a new email to 11 people is fine", to(eleven, false).Count, 0);
+            Check("reply subjects", PreSendCheck.IsReplySubject("SV: Avtal") && PreSendCheck.IsReplySubject("RE: RE: Plan"), true);
+            Check("forward and new subjects are not replies",
+                PreSendCheck.IsReplySubject("VB: Avtal") || PreSendCheck.IsReplySubject("FW: Plan") || PreSendCheck.IsReplySubject("Svar om planen"), false);
+            Check("a reply to 10 people is fine", to(eleven.Take(10).ToList(), true).Count, 0);
+            List<PreSendFinding> mixed = to(new List<string> { "olle@hiq.se", "kim@hiq.fi", "anna@Example.com", "bo@kund.se" }, false);
+            Check("inside and outside HiQ", mixed.Count(f => f.Kind == PreSendKind.Mixed), 1);
+            Check("...naming the outside domains", mixed[0].Message.Contains("example.com, kund.se"), true);
+            Check("all HiQ, including Zool and a subdomain",
+                to(new List<string> { "a@hiq.se", "b@zoolengineering.se", "c@se.hiq.de" }, false).Count, 0);
+            Check("all outside", to(new List<string> { "a@x.com", "b@y.se" }, false).Count, 0);
+
+            Section("Pre-send: weekday and date");
+            Check("Swedish wrong weekday",
+                string.Join("|", PreSendCheck.DateProblems("Ses vi tisdag 12 nov?", today)),
+                "\"tisdag 12 nov\": 12 November 2026 is a Thursday.");
+            Check("Swedish right weekday", PreSendCheck.DateProblems("Ses vi torsdag 12 nov?", today).Count, 0);
+            Check("Swedish 'tisdagen den 12:e november'", PreSendCheck.DateProblems("tisdagen den 12:e november", today).Count, 1);
+            Check("Swedish short form 'tis 12/11'", PreSendCheck.DateProblems("Passar tis 12/11?", today).Count, 1);
+            Check("English 'Tuesday 12 November'", PreSendCheck.DateProblems("How about Tuesday 12 November?", today).Count, 1);
+            Check("English 'Thursday, November 12th'", PreSendCheck.DateProblems("Thursday, November 12th works.", today).Count, 0);
+            Check("English 'Tue, Nov 12'", PreSendCheck.DateProblems("Tue, Nov 12 at 10?", today).Count, 1);
+            Check("a written year is used", PreSendCheck.DateProblems("fredag 12 nov 2027", today).Count, 0);
+            Check("no year: the nearest date (2 Jan from November is next year, a Saturday)",
+                PreSendCheck.DateProblems("lördag 2 jan", today).Count, 0);
+            Check("a date that does not exist is ignored", PreSendCheck.DateProblems("måndag 31 nov", today).Count, 0);
+            Check("only the quoted email has the date", run("Låter bra!" + quoted, 1).Count(f => f.Kind == PreSendKind.Date), 0);
+            Check("ordinary text, no findings", run("Hej Anna, tack för mötet idag. Vi hörs nästa vecka!", 0).Count, 0);
         }
 
         private static string Ranges(IEnumerable<TimeRange> ranges) =>

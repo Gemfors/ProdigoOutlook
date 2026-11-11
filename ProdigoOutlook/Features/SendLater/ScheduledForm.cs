@@ -232,7 +232,7 @@ namespace ProdigoOutlook.Features.SendLater
                     SendLaterChoice choice = SendLaterForm.Ask(this, mail.Subject, entry.DeliverAt, null, isMeeting: false);
                     if (choice == null) return;
                     SendLaterCommands.ApplyToMail(mail, choice);
-                    mail.Send();
+                    ResendFromOutbox(entry, mail);
                 },
                 appt =>
                 {
@@ -251,9 +251,27 @@ namespace ProdigoOutlook.Features.SendLater
                 mail =>
                 {
                     SendLaterCommands.ApplyToMail(mail, SendLaterChoice.Now());
-                    mail.Send();
+                    ResendFromOutbox(entry, mail);
                 },
                 appt => SendLaterCommands.ScheduleMeeting(appt, SendLaterChoice.Now()));
+        }
+
+        /// <summary>
+        /// Sends an email from the Outbox again with only its timing changed. Flagged as
+        /// a resubmit, so the pre-send checks do not run a second time on an email that
+        /// already passed them, and Send later does not retime it: ApplyToMail just did.
+        /// </summary>
+        private static void ResendFromOutbox(OutboxEntry entry, Outlook.MailItem mail)
+        {
+            SendLaterOutbox.BeginResubmit(entry.EntryId);
+            try
+            {
+                mail.Send();
+            }
+            finally
+            {
+                SendLaterOutbox.EndResubmit(entry.EntryId);
+            }
         }
 
         private void CancelSend(OutboxEntry entry)

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using ProdigoOutlook.Features.Availability;
+using ProdigoOutlook.Features.PreSendChecks;
 using ProdigoOutlook.Features.SendLater;
 using Office = Microsoft.Office.Core;
 
@@ -29,6 +30,25 @@ namespace ProdigoOutlook.Core
         private TextBox _workStart, _workEnd, _lunchStart, _lunchEnd, _openListEn, _openListSv, _openSentEn, _openSentSv;
         private readonly Dictionary<DayOfWeek, CheckBox> _dayBoxes = new Dictionary<DayOfWeek, CheckBox>();
         private NumericUpDown _buffer;
+        private readonly PreSendRules _rules = CopyRules(PreSendRulesFile.Current);
+        private CheckBox _chkAttachment, _chkReplyAll, _chkMixed, _chkDates;
+        private TextBox _domains, _attachWords;
+        private NumericUpDown _replyLimit;
+
+        private static PreSendRules CopyRules(PreSendRules r) => new PreSendRules
+        {
+            CheckAttachment = r.CheckAttachment,
+            CheckReplyAll = r.CheckReplyAll,
+            CheckMixed = r.CheckMixed,
+            CheckDates = r.CheckDates,
+            InternalDomains = new List<string>(r.InternalDomains),
+            ReplyAllLimit = r.ReplyAllLimit,
+            AttachmentWords = new List<string>(r.AttachmentWords),
+        };
+
+        private static List<string> SplitList(string text) =>
+            text.Split(new[] { ',', ';', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim()).Where(s => s.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         private Label _error;
 
         public static void Open(Office.IRibbonControl control)
@@ -147,6 +167,46 @@ namespace ProdigoOutlook.Core
             Controls.Add(avail);
             top = Math.Max(top, 12 + avail.Height + 10);
 
+            // Pre-send checks, under Insert availability. Kept in outlook-rules.json.
+            int presendTop = 12 + avail.Height + 10;
+            var presend = new GroupBox { Text = "Pre-send checks (emails)", Left = col2, Top = presendTop, Width = width };
+            int py = 22;
+            _chkAttachment = new CheckBox { Text = "Attachment mentioned, none attached", Left = 12, Top = py, Width = 220, Checked = _rules.CheckAttachment };
+            _chkReplyAll = new CheckBox { Text = "Reply to many people", Left = 236, Top = py, Width = 210, Checked = _rules.CheckReplyAll };
+            py += 24;
+            _chkMixed = new CheckBox { Text = "Inside and outside HiQ mixed", Left = 12, Top = py, Width = 220, Checked = _rules.CheckMixed };
+            _chkDates = new CheckBox { Text = "Weekday doesn't match date", Left = 236, Top = py, Width = 210, Checked = _rules.CheckDates };
+            presend.Controls.AddRange(new Control[] { _chkAttachment, _chkReplyAll, _chkMixed, _chkDates });
+            py += 30;
+
+            presend.Controls.Add(new Label { Text = "HiQ domains:", Left = 12, Top = py + 4, Width = 120 });
+            _domains = new TextBox { Left = 136, Top = py, Width = width - 148, Text = string.Join(", ", _rules.InternalDomains) };
+            presend.Controls.Add(_domains);
+            py += 30;
+
+            presend.Controls.Add(new Label { Text = "Warn on a reply to more than", Left = 12, Top = py + 4, Width = 180 });
+            _replyLimit = new NumericUpDown { Left = 196, Top = py, Width = 60, Minimum = 2, Maximum = 500, Value = Math.Max(2, Math.Min(500, _rules.ReplyAllLimit)) };
+            presend.Controls.Add(_replyLimit);
+            presend.Controls.Add(new Label { Text = "people", Left = 262, Top = py + 4, Width = 60 });
+            py += 32;
+
+            presend.Controls.Add(new Label { Text = "Attachment words, comma-separated. A * at the end matches any ending (bifoga* = bifogar, bifogad...):", Left = 12, Top = py, Width = width - 24, Height = 34 });
+            py += 36;
+            _attachWords = new TextBox { Left = 12, Top = py, Width = width - 24, Height = 40, Multiline = true, Text = string.Join(", ", _rules.AttachmentWords) };
+            presend.Controls.Add(_attachWords);
+            py += 46;
+
+            presend.Controls.Add(new Label
+            {
+                Text = "Switch off Outlook's own attachment reminder, or English emails warn twice: " +
+                       "File > Options > Mail > Send messages.",
+                Left = 12, Top = py, Width = width - 24, Height = 34, ForeColor = SystemColors.GrayText,
+            });
+            py += 38;
+            presend.Height = py + 4;
+            Controls.Add(presend);
+            top = Math.Max(top, presendTop + presend.Height + 10);
+
             int total = left * 3 + width * 2;
             _error = new Label { Left = left, Top = top, Width = total - left * 2, Height = 34, ForeColor = Color.Firebrick };
             Controls.Add(_error);
@@ -164,6 +224,30 @@ namespace ProdigoOutlook.Core
             CancelButton = cancel;
 
             ClientSize = new Size(total, top + 28 + 14);
+        }
+
+        /// <summary>
+        /// After scaling: if the window is taller than the screen (a laptop at 150%),
+        /// fit it to the screen and let it scroll, rather than pushing OK off the bottom.
+        /// </summary>
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            try
+            {
+                Rectangle area = Screen.FromControl(this).WorkingArea;
+                if (Height > area.Height - 20)
+                {
+                    AutoScroll = true;
+                    Height = area.Height - 20;
+                    Width += SystemInformation.VerticalScrollBarWidth;
+                    Top = area.Top + 10;
+                }
+            }
+            catch
+            {
+                // Keep the window as it is.
+            }
         }
 
         private static TextBox OpeningBox(GroupBox group, string label, string value, ref int y)
@@ -210,6 +294,26 @@ namespace ProdigoOutlook.Core
                 return;
             }
 
+            List<string> domains = SplitList(_domains.Text).Select(d => d.TrimStart('@').ToLowerInvariant()).ToList();
+            if (_chkMixed.Checked && domains.Count == 0)
+            {
+                _error.Text = "Pre-send checks: add at least one HiQ domain, or untick \"Inside and outside HiQ mixed\".";
+                return;
+            }
+            List<string> words = SplitList(_attachWords.Text);
+            if (_chkAttachment.Checked && words.Count == 0)
+            {
+                _error.Text = "Pre-send checks: add at least one attachment word, or untick the attachment check.";
+                return;
+            }
+            _rules.CheckAttachment = _chkAttachment.Checked;
+            _rules.CheckReplyAll = _chkReplyAll.Checked;
+            _rules.CheckMixed = _chkMixed.Checked;
+            _rules.CheckDates = _chkDates.Checked;
+            _rules.InternalDomains = domains;
+            _rules.ReplyAllLimit = (int)_replyLimit.Value;
+            _rules.AttachmentWords = words;
+
             _edit.AvailabilityWorkStart = workStart.Value.ToString(@"hh\:mm");
             _edit.AvailabilityWorkEnd = workEnd.Value.ToString(@"hh\:mm");
             _edit.AvailabilityWorkDays = AvailabilityText.DaysText(workDays);
@@ -229,6 +333,7 @@ namespace ProdigoOutlook.Core
             _edit.SendLaterPresets = presets;
             _edit.SendLaterRoomWarning = _roomWarning.Checked;
             _edit.SaveAsCurrent();
+            PreSendRulesFile.Save(_rules);
             Log.Info("Settings saved");
 
             DialogResult = DialogResult.OK;

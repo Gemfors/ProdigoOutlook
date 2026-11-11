@@ -70,7 +70,7 @@ error goes to the log.
 | Phase | Feature | Status | Where |
 |---|---|---|---|
 | 1 | **Send later**: emails and meeting invites, editable and reschedulable, Scheduled list, room warning, Outbox protection | ✅ Built and tested in Olle's mailbox, 4–5 Nov 2026 | Compose, Appointment, Main window |
-| 2 | Pre-send checks: missing attachment, empty subject, big reply-all, internal and external recipients mixed, wrong account, weekday/date mismatch. Rules in a JSON file | Planned | On send |
+| 2 | **Pre-send checks**: missing attachment (Swedish and English), reply to many, inside and outside HiQ mixed, weekday that does not match its date. Rules in `outlook-rules.json` | ✅ Built (untested in Outlook) | On send (emails) |
 | 3 | **Insert availability**: your free times from the calendar, as a list or a sentence, Swedish or English | ✅ Built (untested in Outlook) | Compose, Main window (reading-pane replies) |
 | 4 | Email to Todo Kanban | Planned; integration point to be decided | Main window, Read |
 | 5 | Follow-up tracker: "remind me if no reply in X days" | Planned | Compose, Main window |
@@ -182,6 +182,33 @@ watches for this:
 
 ---
 
+## Pre-send checks
+
+When you send an email, Prodigo checks it quickly. If everything looks fine, you notice
+nothing. If something looks wrong, a window lists what it found, with **Go back** (the
+default: Enter or Esc) and **Send anyway**.
+
+| Check | Warns when |
+|---|---|
+| Missing attachment | Your own text, not the quoted email, mentions an attachment in Swedish or English ("bifogar", "bilaga", "attached", "enclosed"…), and nothing is attached. Pictures in the signature don't count as attachments. |
+| Reply to many | A reply ("RE:", "SV:"…) goes to more than 10 people. Outlook doesn't record whether you pressed Reply all, so any large reply counts. |
+| Inside and outside HiQ | The email goes both to HiQ addresses (hiq.se, hiq.fi, hiq.de, zoolengineering.se) and to others. The outside domains are named. |
+| Weekday and date | Your text says "tisdag 12 nov" or "Tuesday 12 November", but that date is another weekday. |
+
+- **Emails only:** meeting invites aren't checked.
+- **Empty subject:** left to Outlook's own question.
+- **Outlook's own attachment reminder:** switch it off once this works (File → Options →
+  Mail → Send messages), or English emails warn twice.
+- **With Send later:** the checks run first. **Go back** schedules nothing, and an
+  email you'd already scheduled keeps its earlier time.
+- **No second check:** emails Prodigo puts back in the queue or retimes from Scheduled
+  aren't checked again.
+- **If Prodigo itself fails:** the email is sent as normal.
+- **Settings:** each check can be switched off, and the domains, the limit and the
+  words can be changed. They're stored in `outlook-rules.json`.
+
+---
+
 ## Insert availability
 
 In an email you're writing, click where the times should go and press
@@ -282,7 +309,7 @@ Settings*. Case and spaces don't matter.
 |---|---|
 | Settings (feature switches, presets, room warning, availability hours, buffer and opening lines) | `%APPDATA%\Prodigo\outlook-settings.txt`, plain `key = value` |
 | Log, one file per day, 14 days kept | `%LOCALAPPDATA%\Prodigo\Logs\outlook-yyyy-MM-dd.log` |
-| Phase 2 rules (future) | `%APPDATA%\Prodigo\outlook-rules.json` |
+| Pre-send rules (checks on/off, HiQ domains, reply limit, attachment words) | `%APPDATA%\Prodigo\outlook-rules.json`, edited in Settings |
 
 **Prodigo → Settings** edits the settings file and has buttons to open both folders.
 
@@ -407,7 +434,32 @@ every invite that was replaced.
 - [ ] Settings: switch Insert availability off. The button disappears from both
   windows.
 
-### Phases 2 and 4–8
+### Phase 2: Pre-send checks
+
+Send these to yourself, or to your Gmail.
+- [ ] An ordinary email with nothing wrong goes out with no window, and no noticeable
+  delay. The log has a line "Pre-send checks: 0 finding(s) … in N ms".
+- [ ] "Jag bifogar filen." with nothing attached: warning. Go back leaves the email
+  open and unsent. Attach a file and send: no warning.
+- [ ] "Please see attached." with nothing attached: Prodigo warns. Once Outlook's own
+  reminder is switched off, only Prodigo warns.
+- [ ] An email with only your signature logo, saying "bifogar": warns. The logo is not
+  an attachment.
+- [ ] A reply whose quoted email says "bifogar" while yours doesn't: no warning.
+- [ ] To your hiq.se address and your Gmail: warning naming gmail.com. Send anyway
+  sends it.
+- [ ] "Ses tisdag 12 nov" in a year where the 12th is not a Tuesday: warning, giving
+  the right weekday.
+- [ ] Several problems at once: one window lists them all.
+- [ ] Prodigo's Send Later button on an email with "bifogar" and no attachment: the
+  warning appears. Go back: nothing in the Outbox, and pressing Outlook's normal Send
+  later sends it immediately, not delayed. Send anyway: it is scheduled.
+- [ ] Scheduled → Change time on a waiting email: no warning.
+- [ ] A meeting invite with "bifogar" and no attachment: no warning.
+- [ ] Settings: switch off one check; it no longer warns. Switch off Pre-send checks
+  under Features; nothing warns.
+
+### Phases 4–8
 
 These get written when each phase is built. At minimum, each will cover: the
 feature's happy path, the switch in Settings, its keytip and bridge name, and (for

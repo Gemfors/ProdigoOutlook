@@ -78,6 +78,7 @@
     <Reference Include="System.Xml" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Web.Extensions" />
     <Reference Include="Microsoft.CSharp" />
   </ItemGroup>
   <ItemGroup>
@@ -149,6 +150,11 @@
     <Compile Include="Features\SendLater\SendLaterOutbox.cs" />
     <Compile Include="Features\SendLater\SendLaterTime.cs" />
     <Compile Include="Features\PreSendChecks\PreSendChecks.cs" />
+    <Compile Include="Features\PreSendChecks\PreSendRules.cs" />
+    <Compile Include="Features\PreSendChecks\PreSendRulesFile.cs" />
+    <Compile Include="Features\PreSendChecks\PreSendWarningForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Features\Availability\Availability.cs" />
     <Compile Include="Features\Availability\AvailabilityCalendar.cs" />
     <Compile Include="Features\Availability\AvailabilityForm.cs">
